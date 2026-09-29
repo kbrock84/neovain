@@ -99,7 +99,9 @@ cargo install --git https://github.com/kbrock84/neovain
 
 MSYS rewrites arguments containing `/…` (e.g. `/pat<CR>`) into Windows paths. Run with
 `MSYS_NO_PATHCONV=1`. neovain detects the mangling and refuses to run, rather than edit the
-wrong thing.
+wrong thing. Note that it also turns off
+conversion of the FILE argument, so pass a relative path or a Windows path (`C:/...`),
+not an MSYS path like `/tmp/x`.
 
 ## Benchmarks
 
