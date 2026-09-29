@@ -1,0 +1,323 @@
+{
+ "large": {
+  "opus": {
+   "edit": {
+    "out_tok": 28903.333,
+    "think_tok": 2319.667,
+    "api_requests": 20.333,
+    "tool_calls": 23,
+    "edit_calls": 10,
+    "wall_s": 227.4,
+    "cost_usd": 1.333,
+    "n": 3,
+    "passed": 3
+   },
+   "neovain": {
+    "out_tok": 3161.667,
+    "think_tok": 1432.333,
+    "api_requests": 9,
+    "tool_calls": 9,
+    "edit_calls": 2,
+    "wall_s": 43.0,
+    "cost_usd": 0.325,
+    "n": 3,
+    "passed": 3
+   }
+  },
+  "sonnet": {
+   "edit": {
+    "out_tok": 31338.667,
+    "think_tok": 1657,
+    "api_requests": 14.667,
+    "tool_calls": 21,
+    "edit_calls": 8.667,
+    "wall_s": 158.7,
+    "cost_usd": 0.743,
+    "n": 3,
+    "passed": 3
+   },
+   "neovain": {
+    "out_tok": 3530,
+    "think_tok": 2035.667,
+    "api_requests": 7.333,
+    "tool_calls": 7.667,
+    "edit_calls": 1.333,
+    "wall_s": 37.933,
+    "cost_usd": 0.167,
+    "n": 3,
+    "passed": 2
+   }
+  }
+ },
+ "headline": {
+  "out_ratio": 9.01,
+  "time_ratio": 4.74,
+  "cost_ratio": 4.28
+ },
+ "large_rows": [
+  {
+   "model": "opus",
+   "arm": "edit",
+   "ctx": "2,350 lines",
+   "pass": "3/3",
+   "out_tok": 28903.333,
+   "think_tok": 2319.667,
+   "api_requests": 20.333,
+   "tool_calls": 23,
+   "edit_calls": 10,
+   "wall_s": 227.4,
+   "cost_usd": 1.333
+  },
+  {
+   "model": "opus",
+   "arm": "neovain",
+   "ctx": "2,350 lines",
+   "pass": "3/3",
+   "out_tok": 3161.667,
+   "think_tok": 1432.333,
+   "api_requests": 9,
+   "tool_calls": 9,
+   "edit_calls": 2,
+   "wall_s": 43.0,
+   "cost_usd": 0.325
+  },
+  {
+   "model": "sonnet",
+   "arm": "edit",
+   "ctx": "2,350 lines",
+   "pass": "3/3",
+   "out_tok": 31338.667,
+   "think_tok": 1657,
+   "api_requests": 14.667,
+   "tool_calls": 21,
+   "edit_calls": 8.667,
+   "wall_s": 158.7,
+   "cost_usd": 0.743
+  },
+  {
+   "model": "sonnet",
+   "arm": "neovain",
+   "ctx": "2,350 lines",
+   "pass": "2/3",
+   "out_tok": 3530,
+   "think_tok": 2035.667,
+   "api_requests": 7.333,
+   "tool_calls": 7.667,
+   "edit_calls": 1.333,
+   "wall_s": 37.933,
+   "cost_usd": 0.167
+  }
+ ],
+ "small_rows": [
+  {
+   "model": "opus",
+   "arm": "edit",
+   "ctx": "none",
+   "pass": "3/3",
+   "out_tok": 1797,
+   "think_tok": 21.333,
+   "api_requests": 4.333,
+   "tool_calls": 8,
+   "edit_calls": 5,
+   "wall_s": 17.833,
+   "cost_usd": 0.18
+  },
+  {
+   "model": "opus",
+   "arm": "neovain",
+   "ctx": "none",
+   "pass": "3/3",
+   "out_tok": 1788.667,
+   "think_tok": 1039,
+   "api_requests": 4,
+   "tool_calls": 4,
+   "edit_calls": 1.667,
+   "wall_s": 23.8,
+   "cost_usd": 0.208
+  },
+  {
+   "model": "opus",
+   "arm": "neovain-ex",
+   "ctx": "none",
+   "pass": "3/3",
+   "out_tok": 1934,
+   "think_tok": 1013,
+   "api_requests": 3.667,
+   "tool_calls": 4,
+   "edit_calls": 1.667,
+   "wall_s": 24.133,
+   "cost_usd": 0.214
+  },
+  {
+   "model": "opus",
+   "arm": "edit",
+   "ctx": "250 KB preload",
+   "pass": "3/3",
+   "out_tok": 1787,
+   "think_tok": 22,
+   "api_requests": 4.667,
+   "tool_calls": 9,
+   "edit_calls": 6.333,
+   "wall_s": 25.767,
+   "cost_usd": 1.468
+  },
+  {
+   "model": "opus",
+   "arm": "neovain",
+   "ctx": "250 KB preload",
+   "pass": "3/3",
+   "out_tok": 1569,
+   "think_tok": 870.333,
+   "api_requests": 4.667,
+   "tool_calls": 4.667,
+   "edit_calls": 1.667,
+   "wall_s": 23.633,
+   "cost_usd": 1.496
+  },
+  {
+   "model": "opus",
+   "arm": "neovain-ex",
+   "ctx": "250 KB preload",
+   "pass": "3/3",
+   "out_tok": 1806.667,
+   "think_tok": 1233.333,
+   "api_requests": 3.667,
+   "tool_calls": 2.667,
+   "edit_calls": 1.667,
+   "wall_s": 25.4,
+   "cost_usd": 1.465
+  },
+  {
+   "model": "sonnet",
+   "arm": "edit",
+   "ctx": "none",
+   "pass": "3/3",
+   "out_tok": 2022.667,
+   "think_tok": 63,
+   "api_requests": 4,
+   "tool_calls": 10.667,
+   "edit_calls": 7.667,
+   "wall_s": 16.5,
+   "cost_usd": 0.098
+  },
+  {
+   "model": "sonnet",
+   "arm": "neovain",
+   "ctx": "none",
+   "pass": "3/3",
+   "out_tok": 2005.667,
+   "think_tok": 1311.667,
+   "api_requests": 4,
+   "tool_calls": 4.667,
+   "edit_calls": 1.667,
+   "wall_s": 22.533,
+   "cost_usd": 0.113
+  },
+  {
+   "model": "sonnet",
+   "arm": "neovain-ex",
+   "ctx": "none",
+   "pass": "3/3",
+   "out_tok": 2089.333,
+   "think_tok": 1279.333,
+   "api_requests": 4.333,
+   "tool_calls": 4.667,
+   "edit_calls": 2.333,
+   "wall_s": 23.933,
+   "cost_usd": 0.117
+  },
+  {
+   "model": "sonnet",
+   "arm": "edit",
+   "ctx": "250 KB preload",
+   "pass": "3/3",
+   "out_tok": 1960.667,
+   "think_tok": 74,
+   "api_requests": 3.333,
+   "tool_calls": 10,
+   "edit_calls": 7.667,
+   "wall_s": 17.967,
+   "cost_usd": 0.752
+  },
+  {
+   "model": "sonnet",
+   "arm": "neovain",
+   "ctx": "250 KB preload",
+   "pass": "3/3",
+   "out_tok": 2515.667,
+   "think_tok": 1659.667,
+   "api_requests": 5.333,
+   "tool_calls": 5.333,
+   "edit_calls": 2.333,
+   "wall_s": 30.567,
+   "cost_usd": 0.847
+  },
+  {
+   "model": "sonnet",
+   "arm": "neovain-ex",
+   "ctx": "250 KB preload",
+   "pass": "3/3",
+   "out_tok": 2322.667,
+   "think_tok": 1471.333,
+   "api_requests": 3.667,
+   "tool_calls": 4.333,
+   "edit_calls": 1.667,
+   "wall_s": 28.767,
+   "cost_usd": 0.781
+  }
+ ],
+ "large_fail_note": "Correctness: 5 of 6 neovain runs and 6 of 6 Edit runs passed. The failed neovain run used a line range that ended at the end of a class instead of the end of a method: valid Vim, wrong edit, and the agent never read the diff.",
+ "demo": {
+  "source": {
+   "neovain": "large_opus_neovain_ctx0_1",
+   "edit": "large_opus_edit_ctx0_1"
+  },
+  "neovain_command": "neovain work.py '@def sync_all(' ':.+2,/^        return total$/>' '@def sync_all(' $':+1a\\n        with self._lock:\\n.' ':%s/\\<log_event\\>/emit_event/g' ':g/^def debug_/.,/^\\S/-1d' '@^class LegacyExporter' ':.,/^class EventStore/-1d' '@^class ReportBuilder' ':.-2,/^def rank_users/-3m$' '@^class CacheLayer' ':mark a' '@^class SessionManager' \":.,/^def sample_events/-1m 'a-1\"",
+  "neovain_calls": 2,
+  "neovain_chars": 760,
+  "edit_count": 8,
+  "edit_chars": 65379,
+  "edit_calls": [
+   {
+    "summary": "replace every log_event( with emit_event(",
+    "old_chars": 10,
+    "new_chars": 11
+   },
+   {
+    "summary": "replace 19 lines with 1",
+    "old_chars": 609,
+    "new_chars": 17
+   },
+   {
+    "summary": "replace 316 lines with 1",
+    "old_chars": 11706,
+    "new_chars": 21
+   },
+   {
+    "summary": "replace 6 lines with 321",
+    "old_chars": 168,
+    "new_chars": 11853
+   },
+   {
+    "summary": "replace 420 lines with 1",
+    "old_chars": 15595,
+    "new_chars": 17
+   },
+   {
+    "summary": "replace 123 lines with 124",
+    "old_chars": 5140,
+    "new_chars": 5645
+   },
+   {
+    "summary": "replace 260 lines with 3",
+    "old_chars": 7905,
+    "new_chars": 83
+   },
+   {
+    "summary": "replace 4 lines with 217",
+    "old_chars": 43,
+    "new_chars": 6556
+   }
+  ]
+ }
+}

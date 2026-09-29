@@ -119,6 +119,7 @@ pre {
 .swatch { width: 10px; height: 10px; border-radius: 3px; flex: none; display: inline-block; }
 .swatch.neovain { background: var(--neovain); }
 .swatch.edit { background: var(--edit); }
+.swatch.neovain-ex { background: transparent; box-shadow: inset 0 0 0 2px var(--neovain); }
 
 /* Stat tiles */
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin: 24px 0; }

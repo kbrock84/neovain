@@ -131,6 +131,13 @@ not an MSYS path like `/tmp/x`.
 See [`bench/`](bench/README.md) for the harness comparing neovain against string-replacement
 editing across models, and the results so far.
 
+## Website
+
+[`site/`](site) is the project website: plain HTML, CSS and JavaScript with no build step, deployed
+on Cloudflare Pages with `site` as the output directory. The benchmark numbers come from
+`site/data/results.json`, which `python3 bench/export_site.py` regenerates from the committed results.
+Every file in it was created and edited with neovain.
+
 ## License
 
 Licensed under the [Apache License, Version 2.0](LICENSE).

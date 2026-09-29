@@ -39,7 +39,7 @@
 
   function niceMax(v) {
     var p = Math.pow(10, Math.floor(Math.log10(v)));
-    var steps = [1, 2, 2.5, 5, 10];
+    var steps = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
     for (var i = 0; i < steps.length; i++) if (steps[i] * p >= v) return steps[i] * p;
     return 10 * p;
   }
@@ -153,9 +153,17 @@
     { key: "cost_usd", label: "Cost", num: true, fmt: fmt.usd }
   ];
 
+  // Split a shell command into words (respecting '...', "..." and $'...') and put each step on its own line.
+  function formatCommand(command) {
+    var words = command.match(/\$'(?:[^'\\]|\\.)*'|'[^']*'|"(?:[^"\\]|\\.)*"|\S+/g) || [command];
+    var head = [];
+    while (words.length && !/^[$'"]/.test(words[0])) head.push(words.shift());
+    return [head.join(" ")].concat(words).join(" \\\n  ");
+  }
+
   function renderDemo(data) {
     var cmd = document.querySelector("[data-demo-command]");
-    if (cmd) cmd.textContent = data.demo.neovain_command;
+    if (cmd) cmd.textContent = formatCommand(data.demo.neovain_command);
     var list = document.querySelector("[data-demo-edits]");
     if (!list) return;
     var max = Math.max.apply(null, data.demo.edit_calls.map(function (c) { return c.old_chars + c.new_chars; }));
@@ -167,8 +175,11 @@
       label.appendChild(document.createTextNode(" " + c.summary));
       row.appendChild(label);
       var bar = el("div", { class: "edit-call-bar", title: fmt.int(c.old_chars) + " characters removed, " + fmt.int(c.new_chars) + " typed" });
-      bar.appendChild(el("span", { class: "old", style: "width:" + (100 * c.old_chars / max) + "%" }));
-      bar.appendChild(el("span", { class: "new", style: "width:" + (100 * c.new_chars / max) + "%" }));
+      ["old", "new"].forEach(function (kind) {
+        var span = el("span", { class: kind });
+        span.style.width = (100 * c[kind + "_chars"] / max) + "%";  // CSSOM, so a strict CSP allows it
+        bar.appendChild(span);
+      });
       row.appendChild(bar);
       row.appendChild(el("div", { class: "edit-call-num" }, fmt.chars(c.old_chars + c.new_chars)));
       list.appendChild(row);

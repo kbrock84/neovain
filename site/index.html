@@ -48,10 +48,10 @@
 
         <div class="grid-2 demo">
           <div class="card">
-            <p class="card-label"><span class="swatch neovain" aria-hidden="true"></span>neovain &middot; 1 call</p>
+            <p class="card-label"><span class="swatch neovain" aria-hidden="true"></span>neovain &middot; <span data-bind="demo.neovain_calls">&ndash;</span> calls</p>
             <pre class="demo-command"><code data-demo-command>Loading&hellip;</code></pre>
-            <p class="stat-note">The agent previewed this with <code>--dry-run</code>, then ran it.
-              <span data-bind="demo.neovain_chars" data-format="int">&ndash;</span> characters in total.</p>
+            <p class="stat-note">The agent previewed the change with <code>--dry-run</code>, then ran it for real
+              (shown). <span data-bind="demo.neovain_chars" data-format="int">&ndash;</span> characters across both calls.</p>
           </div>
           <div class="card">
             <p class="card-label"><span class="swatch edit" aria-hidden="true"></span>Edit tool &middot;
