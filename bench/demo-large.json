@@ -1,0 +1,53 @@
+{
+ "source": {
+  "neovain": "large_opus_neovain_ctx0_1",
+  "edit": "large_opus_edit_ctx0_1"
+ },
+ "neovain_command": "neovain work.py '@def sync_all(' ':.+2,/^        return total$/>' '@def sync_all(' $':+1a\\n        with self._lock:\\n.' ':%s/\\<log_event\\>/emit_event/g' ':g/^def debug_/.,/^\\S/-1d' '@^class LegacyExporter' ':.,/^class EventStore/-1d' '@^class ReportBuilder' ':.-2,/^def rank_users/-3m$' '@^class CacheLayer' ':mark a' '@^class SessionManager' \":.,/^def sample_events/-1m 'a-1\"",
+ "neovain_calls": 2,
+ "neovain_chars": 760,
+ "edit_count": 8,
+ "edit_chars": 65379,
+ "edit_calls": [
+  {
+   "summary": "replace every log_event( with emit_event(",
+   "old_chars": 10,
+   "new_chars": 11
+  },
+  {
+   "summary": "replace 19 lines with 1",
+   "old_chars": 609,
+   "new_chars": 17
+  },
+  {
+   "summary": "replace 316 lines with 1",
+   "old_chars": 11706,
+   "new_chars": 21
+  },
+  {
+   "summary": "replace 6 lines with 321",
+   "old_chars": 168,
+   "new_chars": 11853
+  },
+  {
+   "summary": "replace 420 lines with 1",
+   "old_chars": 15595,
+   "new_chars": 17
+  },
+  {
+   "summary": "replace 123 lines with 124",
+   "old_chars": 5140,
+   "new_chars": 5645
+  },
+  {
+   "summary": "replace 260 lines with 3",
+   "old_chars": 7905,
+   "new_chars": 83
+  },
+  {
+   "summary": "replace 4 lines with 217",
+   "old_chars": 43,
+   "new_chars": 6556
+  }
+ ]
+}
