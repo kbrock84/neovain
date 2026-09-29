@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run the neovain-vs-Edit benchmark matrix with headless `claude -p` and summarize it.
 
-  python3 run.py [--models opus,sonnet] [--arms edit,neovain,neovain-ex] [--task small,large] [--context-kb 0,250]
+  python3 run.py [--agent codex] [--models opus,sonnet] [--arms edit,neovain,neovain-ex] [--task small,large] [--context-kb 0,250]
                  [--reps 3] [-j 3] [--out runs] [--bin neovain]
   python3 run.py --summarize-only --out runs
 
@@ -60,7 +60,7 @@ TOOLS = {
     "neovain-ex": (["Bash", "Read", "Grep", "Glob"], ["Edit", "Write", "NotebookEdit", "Agent"]),
 }
 
-NEOVAIN_CALL = re.compile(r"(?:^|[\s;&|(])(?:\S*/)?neovain(?:\s|$)")
+NEOVAIN_CALL = re.compile(r"""(?:^|[\s;&|('"])(?:\S*/)?neovain(?:\s|$)""")
 # Bash commands that change work.py without going through neovain break the rules of either arm.
 ILLEGAL_WRITE = re.compile(r"(sed\s+-i|>\s*work\.py|tee\s+work\.py|open\([^)]*work\.py[^)]*['\"][wa])")
 
@@ -88,11 +88,15 @@ def run_one(a, task: str, model: str, arm: str, kb: int, rep: int, background: d
     d.mkdir(parents=True)
     shutil.copy(HERE / "tasks" / task / "fixture.py", d / "work.py")
     shutil.copy(HERE / "tasks" / task / "TASKS.md", d / "TASKS.md")
-    allowed, denied = TOOLS[arm]
-    cmd = ["claude", "-p", "--model", model, "--output-format", "stream-json", "--verbose",
-           "--allowedTools", *allowed, "--disallowedTools", *denied, "--max-turns", "40"]
+    if a.agent == "codex":
+        cmd = ["codex", "exec", "--json", "--skip-git-repo-check", "--sandbox", "workspace-write", "-m", model, "-"]
+        prompt = background[kb] + codex_prompts(a.bin)[arm]
+    else:
+        allowed, denied = TOOLS[arm]
+        cmd = ["claude", "-p", "--model", model, "--output-format", "stream-json", "--verbose",
+               "--allowedTools", *allowed, "--disallowedTools", *denied, "--max-turns", "40"]
+        prompt = background[kb] + prompts(a.bin)[arm]
     env = {**os.environ, "NEOVAIN_EX_ONLY": "1" if arm == "neovain-ex" else "0"}
-    prompt = background[kb] + prompts(a.bin)[arm]
     t0 = time.monotonic()
     with open(d / "stream.jsonl", "w") as f:
         proc = subprocess.run(cmd, cwd=d, input=prompt, stdout=f, stderr=subprocess.PIPE, text=True,
@@ -101,7 +105,10 @@ def run_one(a, task: str, model: str, arm: str, kb: int, rep: int, background: d
     check = subprocess.run(["python3", str(HERE / "tasks" / task / "check.py"), str(d / "work.py")], capture_output=True, text=True)
     row = {"task": task, "model": model, "arm": arm, "ctx_kb": kb, "rep": rep, "wall_s": round(wall, 1),
            "pass": check.returncode == 0, "check": check.stdout.strip(), "exit": proc.returncode}
-    row.update(parse_stream(d / "stream.jsonl"))
+    stream = d / "stream.jsonl"
+    row.update(parse_codex_stream(stream, arm) if a.agent == "codex" else parse_stream(stream))
+    row["agent"] = a.agent
+    row["model_id"] = row["model_id"] or model
     if proc.returncode != 0:
         row["stderr"] = proc.stderr[-500:]
     return row
@@ -161,6 +168,85 @@ def parse_stream(path: Path) -> dict:
     }
 
 
+def codex_prompts(binary: str) -> dict:
+    common = COMMON.replace("(Read, Grep, Glob, cat -n, rg)", "(cat -n, rg, sed -n)")
+    tool = f"""You must modify work.py ONLY by running the neovain CLI in the shell:
+  {binary} work.py STEP...
+Read {README} first to learn it. Do not write work.py any other way
+(no apply_patch or other file-editing tool, no sed -i, no redirection, no scripts)."""
+    return {
+        "edit": f"""{common}
+You must modify work.py ONLY with your built-in file-editing tool (apply_patch). Do not use shell
+commands, redirection or scripts to change the file.""",
+        "neovain": f"{common}\n{tool}",
+        "neovain-ex": f"""{common}
+{tool}
+Ex-only mode is enabled: only @anchor and :ex steps are accepted. Normal-mode keys and :normal are
+rejected. Insert text with :a, :i or :c.""",
+    }
+
+
+def parse_codex_stream(path: Path, arm: str) -> dict:
+    """Metrics from `codex exec --json`. Codex reports neither cost nor the number of model requests.
+
+    Codex has no flags to switch tools off, so the arms are enforced by the prompt alone. A run that
+    edits work.py the wrong way (apply_patch in a neovain arm, the shell in the edit arm) is counted
+    under violations.
+    """
+    counts, edit_calls, edit_failed, violations = {}, 0, 0, 0
+    usage = {"input_tokens": 0, "cached_input_tokens": 0, "output_tokens": 0, "reasoning_output_tokens": 0}
+    turns, error = 0, None
+    for line in path.read_text().splitlines():
+        try:
+            ev = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        kind, item = ev.get("type"), ev.get("item") or {}
+        if kind == "turn.completed":
+            turns += 1
+            for k in usage:
+                usage[k] += (ev.get("usage") or {}).get(k) or 0
+        elif kind in ("turn.failed", "error"):
+            error = json.dumps(ev.get("error") or ev.get("message") or ev)[:300]
+        elif kind == "item.completed" and item.get("type") == "command_execution":
+            counts["shell"] = counts.get("shell", 0) + 1
+            command = item.get("command") or ""
+            if NEOVAIN_CALL.search(command):
+                edit_calls += 1
+                violations += arm == "edit"
+                if "FAILED at step" in (item.get("aggregated_output") or "") or item.get("exit_code") not in (0, None):
+                    edit_failed += 1
+            elif ILLEGAL_WRITE.search(command):
+                violations += 1
+        elif kind == "item.completed" and item.get("type") == "file_change":
+            counts["apply_patch"] = counts.get("apply_patch", 0) + 1
+            if arm == "edit":
+                edit_calls += 1
+                edit_failed += item.get("status") != "completed"
+            elif any(Path(c.get("path") or "").name == "work.py" for c in item.get("changes") or []):
+                violations += 1
+    if error is None and turns == 0:
+        error = "codex finished no turn"
+    return {
+        "out_tok": usage["output_tokens"],
+        "think_tok": usage["reasoning_output_tokens"],
+        "cache_read_tok": usage["cached_input_tokens"],
+        "cache_write_tok": None,
+        "cost_usd": None,
+        "turns": turns,
+        "api_requests": None,
+        "api_s": None,
+        "tool_calls": sum(counts.values()),
+        "tools": counts,
+        "edit_calls": edit_calls,
+        "edit_failed": edit_failed,
+        "violations": violations,
+        "subtype": None,
+        "model_id": None,
+        "api_error": error,
+    }
+
+
 def summarize(rows: list[dict]) -> None:
     def ms(vals):
         vals = [v for v in vals if v is not None]
@@ -194,10 +280,15 @@ def summarize(rows: list[dict]) -> None:
         print("  ".join(t[c].ljust(w[c]) for c in cols))
 
 
-def preflight(binary: str) -> None:
-    """Fail fast if claude can't reach the API or neovain isn't runnable, instead of recording bogus FAILs."""
+def preflight(binary: str, agent: str) -> None:
+    """Fail fast if the agent can't reach its API or neovain isn't runnable, instead of recording bogus FAILs."""
     if not shutil.which(binary):
         raise SystemExit(f"preflight: {binary!r} not found on PATH (cargo install --path .. or pass --bin)")
+    if agent == "codex":
+        p = subprocess.run(["codex", "login", "status"], capture_output=True, text=True, timeout=60)
+        if p.returncode != 0 or "Logged in" not in p.stdout + p.stderr:
+            raise SystemExit(f"preflight: codex is not logged in:\n{p.stdout}{p.stderr}\nRun `codex login`, then retry.")
+        return
     p = subprocess.run(["claude", "-p", "Reply OK", "--model", "haiku", "--output-format", "json"],
                        capture_output=True, text=True, timeout=120)
     try:
@@ -211,6 +302,7 @@ def preflight(binary: str) -> None:
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--agent", default="claude", choices=["claude", "codex"], help="which CLI runs the task")
     ap.add_argument("--models", default="opus,sonnet")
     ap.add_argument("--arms", default="edit,neovain,neovain-ex")
     ap.add_argument("--context-kb", default="0", help="comma-separated preload sizes in KB, e.g. 0,400")
@@ -223,7 +315,7 @@ def main():
     a = ap.parse_args()
     results = a.out / "results.jsonl"
     if not a.summarize_only:
-        preflight(a.bin)
+        preflight(a.bin, a.agent)
         a.out.mkdir(parents=True, exist_ok=True)
         sizes = [int(k) for k in a.context_kb.split(",")]
         background = {kb: preload(kb) for kb in sizes}
@@ -233,13 +325,14 @@ def main():
             for row in ex.map(lambda j: run_one(a, *j, background), jobs):
                 f.write(json.dumps(row) + "\n")
                 f.flush()
-                tag = f"{row['task']:5} {row['model']:6} ctx{row['ctx_kb']:<4} {row['arm']:10} #{row['rep']}"
+                tag = f"{row['task']:5} {row['model']:13} ctx{row['ctx_kb']:<4} {row['arm']:10} #{row['rep']}"
                 if row["api_error"]:
                     print(f"{tag}  ERROR  {row['api_error']}", flush=True)
                     continue
+                cost = "cost n/a" if row["cost_usd"] is None else f"${row['cost_usd']:.3f}"
                 print(f"{tag}  {'PASS' if row['pass'] else 'FAIL'}  out={row['out_tok']} "
                       f"tools={row['tool_calls']} edits={row['edit_calls']} failed={row['edit_failed']} "
-                      f"wall={row['wall_s']}s ${row['cost_usd']:.3f}", flush=True)
+                      f"violations={row['violations']} wall={row['wall_s']}s {cost}", flush=True)
     summarize([json.loads(l) for l in results.read_text().splitlines() if l.strip()])
 
 
