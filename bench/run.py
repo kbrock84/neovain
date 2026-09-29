@@ -82,6 +82,22 @@ def preload(kb: int) -> str:
             "They are not needed for the task that follows.\n\n" + "\n".join(chunks) + "\n\n===== END OF BACKGROUND =====\n\n")
 
 
+LAYOUT_REASONS = ("blank-line layout", "trailing newline")
+
+
+def code_ok(passed: bool, check: str) -> bool:
+    """True if the code is right even though the layout may not be.
+
+    The checkers fail a run for blank lines alone. A large-task failure that says only "layout
+    differs" has the expected syntax tree; a small-task failure is layout-only when every reason
+    is a blank-line or trailing-newline reason.
+    """
+    if passed:
+        return True
+    reasons = check.removeprefix("FAIL: ").split("; ")
+    return bool(check) and all(r.startswith("layout differs") or r in LAYOUT_REASONS for r in reasons)
+
+
 def run_one(a, task: str, model: str, arm: str, kb: int, rep: int, background: dict) -> dict:
     d = a.out / f"{task}_{model}_{arm}_ctx{kb}_{rep}"
     shutil.rmtree(d, ignore_errors=True)
@@ -110,6 +126,7 @@ def run_one(a, task: str, model: str, arm: str, kb: int, rep: int, background: d
            "pass": check.returncode == 0, "check": check.stdout.strip(), "exit": proc.returncode}
     stream = d / "stream.jsonl"
     row.update(parse_codex_stream(stream, arm) if a.agent == "codex" else parse_stream(stream))
+    row["code_ok"] = code_ok(row["pass"], row["check"])
     row["agent"] = a.agent
     # "default" means the CLI chose: Codex models each have their own default level.
     row["effort"] = a.effort or "default"
@@ -272,13 +289,14 @@ def summarize(rows: list[dict]) -> None:
     groups = {}
     for r in rows:
         groups.setdefault((r.get("task", "small"), r["model"], r.get("ctx_kb", 0), r["arm"]), []).append(r)
-    cols = ["task", "model", "ctx_kb", "arm", "n", "pass", "out_tok", "think_tok", "turns", "api_requests", "tool_calls", "edit_calls",
+    cols = ["task", "model", "ctx_kb", "arm", "n", "pass", "code_ok", "out_tok", "think_tok", "turns", "api_requests", "tool_calls", "edit_calls",
             "edit_failed", "violations", "cache_read_tok", "wall_s", "cost_usd"]
     table = []
     for (task, model, kb, arm), rs in sorted(groups.items()):
         table.append({"task": task, "model": model, "ctx_kb": str(kb), "arm": arm, "n": str(len(rs)),
                       "pass": f"{sum(r['pass'] for r in rs)}/{len(rs)}",
-                      **{c: ms([r.get(c) for r in rs]) for c in cols[6:]}})
+                      "code_ok": f"{sum(code_ok(r['pass'], r['check']) for r in rs)}/{len(rs)}",
+                      **{c: ms([r.get(c) for r in rs]) for c in cols[7:]}})
     w = {c: max(len(c), *(len(t[c]) for t in table)) for c in cols}
     print("  ".join(c.ljust(w[c]) for c in cols))
     for t in table:
