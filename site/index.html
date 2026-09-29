@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>neovain: vim for AI agents</title>
+  <meta name="description" content="neovain lets coding agents edit files with Vim's commands, a whole change per call. Benchmarks against string-replacement editing.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="theme.js"></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="./">neovain</a>
+      <nav class="site-nav" aria-label="Main">
+        <a href="#benchmarks">Benchmarks</a>
+        <a href="docs.html">Docs</a>
+        <a href="https://github.com/kbrock84/neovain">GitHub</a>
+        <button class="theme-toggle" type="button" aria-label="Toggle dark mode" data-theme-toggle>&#9680;</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <p class="eyebrow">Open source &middot; Apache-2.0</p>
+        <h1>Vim for AI agents</h1>
+        <p class="lede">neovain lets a coding agent edit a file with Vim's commands, a whole change per call.
+          Every step applies, or none do.</p>
+        <div class="install"><pre><code>cargo install --git https://github.com/kbrock84/neovain</code></pre></div>
+        <div class="actions">
+          <a class="button primary" href="docs.html">Read the docs</a>
+          <a class="button" href="#benchmarks">See the benchmarks</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="demo">
+      <div class="wrap">
+        <h2>One command instead of retyping the file</h2>
+        <p class="prose">We gave Claude a 2,350-line Python module and six structural changes: delete a 400-line
+          class, move another to the end, swap two more, wrap a 122-line method body in a lock, rename a method
+          used 191 times, and remove the debug helpers. Same model, same task, two ways to edit. These are the
+          actual calls from one pair of benchmark runs.</p>
+
+        <div class="grid-2 demo">
+          <div class="card">
+            <p class="card-label"><span class="swatch neovain" aria-hidden="true"></span>neovain &middot; 1 call</p>
+            <pre class="demo-command"><code data-demo-command>Loading&hellip;</code></pre>
+            <p class="stat-note">The agent previewed this with <code>--dry-run</code>, then ran it.
+              <span data-bind="demo.neovain_chars" data-format="int">&ndash;</span> characters in total.</p>
+          </div>
+          <div class="card">
+            <p class="card-label"><span class="swatch edit" aria-hidden="true"></span>Edit tool &middot;
+              <span data-bind="demo.edit_count">&ndash;</span> calls</p>
+            <div class="edit-calls" data-demo-edits></div>
+            <p class="edit-legend"><span><i class="old"></i>text removed</span><span><i class="new"></i>text typed</span></p>
+            <p class="stat-note">String replacement spells out the text it removes and the text it adds, so
+              moving a class means typing all of it twice:
+              <span data-bind="demo.edit_chars" data-format="int">&ndash;</span> characters.</p>
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <p class="stat-label">Output tokens</p>
+            <p class="stat-value"><span data-bind="headline.out_ratio" data-format="ratio">&ndash;</span> fewer</p>
+            <p class="stat-note">Mean of Opus and Sonnet, 3 runs each</p>
+          </div>
+          <div class="stat">
+            <p class="stat-label">Wall time</p>
+            <p class="stat-value"><span data-bind="headline.time_ratio" data-format="ratio">&ndash;</span> faster</p>
+            <p class="stat-note">From prompt to finished file</p>
+          </div>
+          <div class="stat">
+            <p class="stat-label">Cost</p>
+            <p class="stat-value"><span data-bind="headline.cost_ratio" data-format="ratio">&ndash;</span> cheaper</p>
+            <p class="stat-note">API list price per task</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="benchmarks">
+      <div class="wrap">
+        <h2>Benchmarks</h2>
+        <p class="prose">Every number here comes from real, headless Claude Code sessions. Each session gets a
+          fresh copy of the file and may edit it only one way. An automated checker then verifies every
+          requested change and that nothing else moved. Methodology, raw data and the harness are in the
+          <a href="https://github.com/kbrock84/neovain/tree/main/bench">repository</a>.</p>
+
+        <h3>Large structural edits</h3>
+        <p class="prose">The six-change refactor above, on the 2,350-line module.</p>
+        <div class="legend" aria-hidden="true">
+          <span><i class="swatch neovain"></i>neovain</span>
+          <span><i class="swatch edit"></i>Edit tool</span>
+        </div>
+        <div class="charts">
+          <div class="chart" data-chart="out_tok" data-format="tokens">
+            <h3>Output tokens</h3><p class="sub">Per task, lower is better</p><div data-plot></div>
+          </div>
+          <div class="chart" data-chart="wall_s" data-format="seconds">
+            <h3>Wall time</h3><p class="sub">Per task, lower is better</p><div data-plot></div>
+          </div>
+          <div class="chart" data-chart="cost_usd" data-format="usd">
+            <h3>Cost</h3><p class="sub">Per task at API list price</p><div data-plot></div>
+          </div>
+        </div>
+        <div class="table-wrap" data-table="large"></div>
+        <p class="prose"><span data-bind="large_fail_note"></span></p>
+
+        <h3>Small edits: a tie</h3>
+        <p class="prose">On a 70-line file with seven small edits, the two approaches tie: every run passed, and
+          cost was the same. neovain halves the number of tool calls, but the Edit tool issues its calls in
+          parallel, so both need about four model round trips. neovain agents also spend about a thousand
+          extra thinking tokens working out line ranges, which makes them a few seconds slower. A 250 KB
+          preloaded context, simulating a long session, doesn't change the picture.</p>
+        <div class="table-wrap" data-table="small"></div>
+      </div>
+    </section>
+
+    <section id="lessons">
+      <div class="wrap">
+        <h2>What we learned</h2>
+        <div class="grid-2">
+          <div class="card">
+            <h3>Reach for neovain when</h3>
+            <ul class="checks">
+              <li>A change moves, deletes or re-indents large blocks. The Edit tool retypes them; Vim's
+                <code>:m</code>, <code>:d</code> and <code>&gt;</code> don't.</li>
+              <li>The same change repeats across a file: <code>:%s</code> and <code>:g</code> do it in one step.</li>
+              <li>You want all-or-nothing edits. A failed step leaves the file untouched, and agents recover
+                on the next call.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Stick with string replacement when</h3>
+            <ul class="checks neutral">
+              <li>The change is small and local. Writing the new text directly is the reasoning; with Vim, the
+                agent has to work out the keystrokes too.</li>
+              <li>The model is small. In an early pilot, Haiku needed about three times as long with neovain
+                and failed one run in three.</li>
+              <li>Nobody will read the diff. Range arithmetic can go wrong and still be valid Vim; that is how
+                the one failed large run happened.</li>
+            </ul>
+          </div>
+        </div>
+        <p class="prose">Tool calls are not round trips. Current models send independent edits as parallel tool
+          calls, so cutting the number of calls saves little. What does cost time and money is output: every
+          token the model writes. neovain wins where it lets the agent say less.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">neovain is open source under the
+      <a href="https://github.com/kbrock84/neovain/blob/main/LICENSE">Apache License 2.0</a>.
+      Every file on this site was created and edited with neovain.</div>
+  </footer>
+</body>
+</html>

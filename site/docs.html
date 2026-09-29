@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>neovain docs</title>
+  <meta name="description" content="How to use neovain: step syntax, literal text, guarantees, and how to hand it to an AI agent.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="theme.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="./">neovain</a>
+      <nav class="site-nav" aria-label="Main">
+        <a href="./#benchmarks">Benchmarks</a>
+        <a href="docs.html" aria-current="page">Docs</a>
+        <a href="https://github.com/kbrock84/neovain">GitHub</a>
+        <button class="theme-toggle" type="button" aria-label="Toggle dark mode" data-theme-toggle>&#9680;</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap docs">
+    <nav class="toc" aria-label="On this page">
+      <a href="#install">Install</a>
+      <a href="#usage">Usage</a>
+      <a href="#steps">Steps</a>
+      <a href="#literal">Literal text</a>
+      <a href="#guarantees">Guarantees</a>
+      <a href="#agents">For agents</a>
+      <a href="#ex-only">Ex-only mode</a>
+      <a href="#windows">Windows</a>
+      <a href="#reference">Reference</a>
+    </nav>
+
+    <article class="prose">
+      <h2 id="install">Install</h2>
+      <p>neovain is a single Rust binary that drives <a href="https://neovim.io">Neovim</a> 0.9 or newer in headless mode.
+        Install Neovim first, then:</p>
+      <pre><code>cargo install --git https://github.com/kbrock84/neovain</code></pre>
+      <p>If <code>nvim</code> isn't on your <code>PATH</code>, point <code>NEOVAIN_NVIM</code> at it.</p>
+
+      <h2 id="usage">Usage</h2>
+      <pre><code>neovain [OPTIONS] FILE STEP [STEP ...]</code></pre>
+      <p>neovain opens <code>FILE</code> in a headless Neovim and applies the steps in order. If every step
+        succeeds, the file is written and a unified diff is printed. If any step fails, neovain stops, prints
+        which step failed and why, and leaves the file untouched.</p>
+      <pre><code>$ neovain app.py '@^def load' 'wciwread_file&lt;Esc&gt;' ':%s/\&lt;load(/read_file(/g'
+--- app.py
++++ app.py
+@@ -1,3 +1,3 @@
+-def load(path):
++def read_file(path):
+     data = open(path).read()
+     return data</code></pre>
+
+      <h2 id="steps">Steps</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Step</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><code>@regex</code></td><td>Move the cursor to the one line matching <code>regex</code>. Fails if no line or more than one line matches.</td></tr>
+            <tr><td><code>@N@regex</code></td><td>Move the cursor to the Nth matching line.</td></tr>
+            <tr><td><code>:excmd</code></td><td>Run an ex command: <code>:%s/old/new/g</code>, <code>:g/pat/d</code>, <code>:10,20m$</code></td></tr>
+            <tr><td>anything else</td><td>Normal-mode keys, with <code>&lt;Esc&gt;</code>, <code>&lt;CR&gt;</code> and <code>&lt;Tab&gt;</code> notation.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Anchors use Vim's regex syntax and match content, not line numbers, so an edit still lands in the right
+        place after earlier steps have shifted lines around. A steps list typically starts each edit with an anchor:</p>
+      <pre><code>neovain app.py \
+  ':%s/\&lt;log_event\&gt;/emit_event/g' \
+  ':g/^def debug_/.,/^\S/-1d' \
+  '@^class LegacyExporter' ':.,/^\S/-1d' \
+  '@^class ReportBuilder' ':-2,/^\S/-3m$'</code></pre>
+
+      <h2 id="literal">Literal text</h2>
+      <p>Normal-mode steps go through Neovim's key notation, so <code>&lt;Tab&gt;</code>, <code>&lt;Del&gt;</code> or
+        <code>&lt;Home&gt;</code> inside typed text become keys, and so do HTML tags like <code>&lt;del&gt;</code>.
+        For literal text, use the ex commands <code>:a</code> (append after the cursor line), <code>:i</code>
+        (insert before it) or <code>:c</code> (replace a range). The text goes on the following lines, ending
+        with a line containing only <code>.</code>:</p>
+      <pre><code>neovain page.html '@&lt;/main&gt;' $':i\n  &lt;p&gt;New &lt;del&gt;old&lt;/del&gt; text&lt;/p&gt;\n.'
+neovain page.html '@&lt;h1&gt;' $':c\n  &lt;h1&gt;New title&lt;/h1&gt;\n.'
+neovain new.html $':0a\n&lt;!doctype html&gt;\n&lt;title&gt;New page&lt;/title&gt;\n.'</code></pre>
+      <p><code>:0a</code> writes into an empty file. New and empty files always get LF line endings.
+        This site was built this way: every file was created and edited with neovain.</p>
+
+      <h2 id="guarantees">Guarantees</h2>
+      <ul class="checks">
+        <li><strong>Transactional.</strong> The first failing step (a search miss, an ambiguous or missing
+          anchor, an ex error) aborts the run. The file is not touched.</li>
+        <li><strong>Literal typing.</strong> Autoindent, formatoptions, textwidth and filetype plugins are off.
+          Text typed in insert mode lands exactly as typed.</li>
+        <li><strong>No wraparound.</strong> <code>wrapscan</code> is off, so <code>/pat&lt;CR&gt;</code> only searches
+          forward from the cursor.</li>
+        <li><strong>Indentation that matches the file.</strong> <code>&gt;</code> and <code>&lt;</code> use tabs if
+          the file already indents with tabs. Otherwise they use <code>--sw</code> spaces (default 4).</li>
+        <li><strong>Faithful writes.</strong> CRLF/LF endings, a missing final newline and file permissions are
+          preserved. The file is written atomically.</li>
+        <li><strong>No-effect warning.</strong> A normal-mode step that changes neither the buffer nor the cursor
+          prints a warning. That usually means a command was left incomplete.</li>
+      </ul>
+
+      <h2 id="agents">For agents</h2>
+      <p>neovain is built to be called by coding agents through a shell tool. Paste this into your agent's
+        instructions (<code>CLAUDE.md</code>, <code>AGENTS.md</code> or a system prompt):</p>
+      <pre><code>To edit files, run `neovain FILE STEP...` (see `neovain --help`).
+- Start each edit with a content anchor: '@^def name' (must match exactly one line).
+- Prefer ex commands for structural or bulk edits: :%s, :g/pat/d, :m (move), :t (copy), :&gt;
+- Insert literal text with :a / :i / :c, ending with a line containing only "."
+- Chain every step of a change into one call; if any step fails, nothing is written.
+- Always read the printed diff. A wrong edit that is still valid vim does not fail.</code></pre>
+      <p>Where it helps most: moving, deleting, re-indenting and reordering large blocks, and changes that repeat
+        across a file. For a small local change, exact string replacement is just as good. See the
+        <a href="./#benchmarks">benchmarks</a>.</p>
+
+      <h2 id="ex-only">Ex-only mode</h2>
+      <p>With <code>NEOVAIN_EX_ONLY=1</code>, only anchors and ex commands are accepted. Normal-mode keys,
+        <code>:normal</code> and <code>:execute</code> are rejected, and text goes in with <code>:a</code>,
+        <code>:i</code> or <code>:c</code>. The benchmark harness uses it to test whether keystroke-level editing
+        costs agents extra reasoning.</p>
+
+      <h2 id="windows">Windows</h2>
+      <p>Under Git Bash, MSYS rewrites arguments that contain <code>/…</code> (like <code>/pat&lt;CR&gt;</code>)
+        into Windows paths. Run neovain with <code>MSYS_NO_PATHCONV=1</code>. neovain detects the mangling and
+        refuses to run rather than edit the wrong thing. With conversion off, pass a relative or Windows-style
+        (<code>C:/…</code>) path for <code>FILE</code>. Doubled backslashes can also be collapsed on the way to a
+        native Windows binary, so prefer patterns without <code>\\</code>. WSL has none of these issues.</p>
+
+      <h2 id="reference">Reference</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Option</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><code>-n</code>, <code>--dry-run</code></td><td>Print the diff without writing.</td></tr>
+            <tr><td><code>-C N</code></td><td>Lines of diff context (default 2).</td></tr>
+            <tr><td><code>--sw N</code></td><td>Shiftwidth for <code>&gt;</code> and <code>&lt;</code> in space-indented files (default 4).</td></tr>
+            <tr><td><code>--timeout SECS</code></td><td>Abort if Neovim takes longer (default 10).</td></tr>
+            <tr><td><code>--</code></td><td>Treat everything after it as steps, for steps that look like flags.</td></tr>
+            <tr><td><code>NEOVAIN_NVIM</code></td><td>Path to the <code>nvim</code> binary.</td></tr>
+            <tr><td><code>NEOVAIN_EX_ONLY=1</code></td><td>Allow only anchors and ex commands.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Exit status: <code>0</code> success, <code>1</code> a step failed or timed out (file unchanged),
+        <code>2</code> usage or setup error.</p>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">neovain is open source under the <a href="https://github.com/kbrock84/neovain/blob/main/LICENSE">Apache License 2.0</a>.</div>
+  </footer>
+</body>
+</html>
