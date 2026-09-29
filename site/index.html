@@ -49,6 +49,7 @@
       </a>
       <nav class="site-nav" aria-label="Main">
         <a href="/#benchmarks">benchmarks</a>
+        <a href="/#behavior">behavior</a>
         <a href="/docs">docs</a>
         <a href="https://github.com/kbrock84/neovain">github</a>
         <button class="icon-button outlined" type="button" data-theme-toggle aria-label="Switch between dark and light">
@@ -147,8 +148,8 @@ or use @N@</span>
           </div>
         </div>
         <dl class="stats">
-          <div><dt>output tokens</dt><dd class="value">9.0× fewer</dd><dd class="sub">Mean of Opus 5.5 and Sonnet 5.5, 3 runs each</dd></div>
-          <div><dt>wall time</dt><dd class="value">4.7× faster</dd><dd class="sub">From prompt to finished file</dd></div>
+          <div><dt>output tokens</dt><dd class="value">12.0× fewer</dd><dd class="sub">Mean of Claude Opus 5.5 and Sonnet 5.5, 3 runs each</dd></div>
+          <div><dt>wall time</dt><dd class="value">6.0× faster</dd><dd class="sub">From prompt to finished file</dd></div>
           <div><dt>cost</dt><dd class="value">4.3× cheaper</dd><dd class="sub">API list price per task</dd></div>
         </dl>
         <!-- /generated:demo -->
@@ -158,12 +159,12 @@ or use @N@</span>
     <section id="benchmarks">
       <div class="wrap">
         <h2>Benchmarks</h2>
-        <p class="intro">Every number here comes from real, headless Claude Code sessions. Each session gets a fresh copy of the file and may edit it only one way. An automated checker then verifies every requested change and that nothing else moved. Methodology, raw data and the harness are in the <a href="https://github.com/kbrock84/neovain/tree/main/bench">repository</a>.</p>
+        <p class="intro">Every number here comes from real, headless agent sessions in Claude Code and Codex CLI, at medium reasoning effort. Each session gets a fresh copy of the file and may edit it only one way. An automated checker then verifies every requested change and that nothing else moved. Methodology, raw data and the harness are in the <a href="https://github.com/kbrock84/neovain/tree/main/bench">repository</a>.</p>
 
         <div class="bench-head">
           <div>
             <h3>Large structural edits</h3>
-            <p>The six-change refactor above, on the 2,350-line module. Lower is better.</p>
+            <p>The six-change refactor above, on the 2,350-line module, in Claude Code. Lower is better.</p>
           </div>
           <div class="legend" aria-hidden="true">
             <span><i class="swatch neovain"></i>neovain</span>
@@ -177,15 +178,15 @@ or use @N@</span>
             <div class="bar-group">
               <span>Opus 5.5</span>
               <div class="bar-rows">
-                <div class="bar-row"><svg class="bar neovain" width="6.1%" height="14" role="img"><title>Opus 5.5, neovain: 3,162 output tokens, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>3,162</span></div>
-                <div class="bar-row"><svg class="bar edit" width="55.3%" height="14" role="img"><title>Opus 5.5, Edit tool: 28,903 output tokens, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>28,903</span></div>
+                <div class="bar-row"><svg class="bar neovain" width="5.1%" height="14" role="img"><title>Opus 5.5, neovain: 2,680 output tokens, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>2,680</span></div>
+                <div class="bar-row"><svg class="bar edit" width="60.0%" height="14" role="img"><title>Opus 5.5, Edit tool: 31,790 output tokens, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>31,790</span></div>
               </div>
             </div>
             <div class="bar-group">
               <span>Sonnet 5.5</span>
               <div class="bar-rows">
-                <div class="bar-row"><svg class="bar neovain" width="6.8%" height="14" role="img"><title>Sonnet 5.5, neovain: 3,530 output tokens, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>3,530</span></div>
-                <div class="bar-row"><svg class="bar edit" width="60.0%" height="14" role="img"><title>Sonnet 5.5, Edit tool: 31,339 output tokens, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>31,339</span></div>
+                <div class="bar-row"><svg class="bar neovain" width="4.5%" height="14" role="img"><title>Sonnet 5.5, neovain: 2,371 output tokens, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>2,371</span></div>
+                <div class="bar-row"><svg class="bar edit" width="54.2%" height="14" role="img"><title>Sonnet 5.5, Edit tool: 28,713 output tokens, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>28,713</span></div>
               </div>
             </div>
           </div>
@@ -194,15 +195,15 @@ or use @N@</span>
             <div class="bar-group">
               <span>Opus 5.5</span>
               <div class="bar-rows">
-                <div class="bar-row"><svg class="bar neovain" width="11.3%" height="14" role="img"><title>Opus 5.5, neovain: 43s wall time, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>43s</span></div>
-                <div class="bar-row"><svg class="bar edit" width="60.0%" height="14" role="img"><title>Opus 5.5, Edit tool: 227s wall time, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>227s</span></div>
+                <div class="bar-row"><svg class="bar neovain" width="9.8%" height="14" role="img"><title>Opus 5.5, neovain: 37s wall time, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>37s</span></div>
+                <div class="bar-row"><svg class="bar edit" width="60.0%" height="14" role="img"><title>Opus 5.5, Edit tool: 229s wall time, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>229s</span></div>
               </div>
             </div>
             <div class="bar-group">
               <span>Sonnet 5.5</span>
               <div class="bar-rows">
-                <div class="bar-row"><svg class="bar neovain" width="10.0%" height="14" role="img"><title>Sonnet 5.5, neovain: 38s wall time, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>38s</span></div>
-                <div class="bar-row"><svg class="bar edit" width="41.9%" height="14" role="img"><title>Sonnet 5.5, Edit tool: 159s wall time, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>159s</span></div>
+                <div class="bar-row"><svg class="bar neovain" width="6.9%" height="14" role="img"><title>Sonnet 5.5, neovain: 26s wall time, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>26s</span></div>
+                <div class="bar-row"><svg class="bar edit" width="40.7%" height="14" role="img"><title>Sonnet 5.5, Edit tool: 155s wall time, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>155s</span></div>
               </div>
             </div>
           </div>
@@ -211,58 +212,141 @@ or use @N@</span>
             <div class="bar-group">
               <span>Opus 5.5</span>
               <div class="bar-rows">
-                <div class="bar-row"><svg class="bar neovain" width="14.6%" height="14" role="img"><title>Opus 5.5, neovain: $0.32 cost, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>$0.32</span></div>
-                <div class="bar-row"><svg class="bar edit" width="60.0%" height="14" role="img"><title>Opus 5.5, Edit tool: $1.33 cost, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>$1.33</span></div>
+                <div class="bar-row"><svg class="bar neovain" width="13.8%" height="14" role="img"><title>Opus 5.5, neovain: $0.33 cost, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>$0.33</span></div>
+                <div class="bar-row"><svg class="bar edit" width="60.0%" height="14" role="img"><title>Opus 5.5, Edit tool: $1.43 cost, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>$1.43</span></div>
               </div>
             </div>
             <div class="bar-group">
               <span>Sonnet 5.5</span>
               <div class="bar-rows">
-                <div class="bar-row"><svg class="bar neovain" width="7.5%" height="14" role="img"><title>Sonnet 5.5, neovain: $0.17 cost, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>$0.17</span></div>
-                <div class="bar-row"><svg class="bar edit" width="33.4%" height="14" role="img"><title>Sonnet 5.5, Edit tool: $0.74 cost, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>$0.74</span></div>
+                <div class="bar-row"><svg class="bar neovain" width="7.2%" height="14" role="img"><title>Sonnet 5.5, neovain: $0.17 cost, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>$0.17</span></div>
+                <div class="bar-row"><svg class="bar edit" width="30.9%" height="14" role="img"><title>Sonnet 5.5, Edit tool: $0.73 cost, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>$0.73</span></div>
               </div>
             </div>
           </div>
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th class="text" scope="col">model</th><th class="text" scope="col">arm</th><th scope="col">passed</th><th scope="col">output tokens</th><th scope="col">API requests</th><th scope="col">tool calls</th><th scope="col">wall time</th><th scope="col">cost</th></tr></thead>
+            <thead><tr><th class="text" scope="col">model</th><th class="text" scope="col">tool</th><th scope="col">exact</th><th scope="col">code correct</th><th scope="col">output tokens</th><th scope="col">API requests</th><th scope="col">tool calls</th><th scope="col">wall time</th><th scope="col">cost</th></tr></thead>
             <tbody>
-              <tr><th class="text" scope="row">Opus 5.5</th><td class="text"><i class="swatch edit"></i>Edit tool</td><td>3/3</td><td>28,903</td><td>20.3</td><td>23.0</td><td>227s</td><td>$1.33</td></tr>
-              <tr><th class="text" scope="row">Opus 5.5</th><td class="text"><i class="swatch neovain"></i>neovain</td><td>3/3</td><td>3,162</td><td>9.0</td><td>9.0</td><td>43s</td><td>$0.32</td></tr>
-              <tr><th class="text" scope="row">Sonnet 5.5</th><td class="text"><i class="swatch edit"></i>Edit tool</td><td>3/3</td><td>31,339</td><td>14.7</td><td>21.0</td><td>159s</td><td>$0.74</td></tr>
-              <tr><th class="text" scope="row">Sonnet 5.5</th><td class="text"><i class="swatch neovain"></i>neovain</td><td class="short">2/3</td><td>3,530</td><td>7.3</td><td>7.7</td><td>38s</td><td>$0.17</td></tr>
+              <tr><th class="text" scope="row">Opus 5.5</th><td class="text"><i class="swatch edit"></i>Edit tool</td><td>3/3</td><td>3/3</td><td>31,790</td><td>19.7</td><td>24.7</td><td>229s</td><td>$1.43</td></tr>
+              <tr><th class="text" scope="row">Opus 5.5</th><td class="text"><i class="swatch neovain"></i>neovain</td><td>3/3</td><td>3/3</td><td>2,680</td><td>10.3</td><td>9.7</td><td>37s</td><td>$0.33</td></tr>
+              <tr><th class="text" scope="row">Sonnet 5.5</th><td class="text"><i class="swatch edit"></i>Edit tool</td><td>3/3</td><td>3/3</td><td>28,713</td><td>17.7</td><td>23.3</td><td>155s</td><td>$0.73</td></tr>
+              <tr><th class="text" scope="row">Sonnet 5.5</th><td class="text"><i class="swatch neovain"></i>neovain</td><td>3/3</td><td>3/3</td><td>2,371</td><td>9.0</td><td>9.0</td><td>26s</td><td>$0.17</td></tr>
             </tbody>
           </table>
         </div>
-        <p class="note"><strong>Correctness:</strong> 5 of 6 neovain runs and 6 of 6 Edit runs passed. The failed neovain run used a line range that ended at the end of a class instead of the end of a method: valid Vim, wrong edit, and the agent never read the diff.</p>
         <!-- /generated:large -->
+        <p class="note">Each run gets two scores. <strong>Exact</strong> means the file matches the expected one line for line, blank lines included. <strong>Code correct</strong> means the code matches and only blank lines differ.</p>
 
         <div class="small-edits">
-          <h3>Small edits: a tie</h3>
-          <p class="note">On a 70-line file with seven small edits, the two approaches tie: every run passed, and cost was the same. neovain halves the number of tool calls, but the Edit tool issues its calls in parallel, so both need about four model round trips. neovain agents also spend about a thousand extra thinking tokens working out line ranges, which makes them a few seconds slower. A 250 KB preloaded context, simulating a long session, doesn't change the picture.</p>
+          <h3>Small edits: close to a tie</h3>
+          <p class="note">On a 70-line file with seven small edits, the two tools are close. Every run passed, and the cost differs by a cent or two. This is where string replacement is at its best: the text to retype is short, so there is little for neovain to save.</p>
         </div>
         <!-- generated:small -->
         <div class="table-wrap">
           <table>
-            <thead><tr><th class="text" scope="col">model</th><th class="text" scope="col">context</th><th class="text" scope="col">arm</th><th scope="col">passed</th><th scope="col">output tokens</th><th scope="col">API requests</th><th scope="col">tool calls</th><th scope="col">wall time</th><th scope="col">cost</th></tr></thead>
+            <thead><tr><th class="text" scope="col">model</th><th class="text" scope="col">tool</th><th scope="col">exact</th><th scope="col">code correct</th><th scope="col">output tokens</th><th scope="col">API requests</th><th scope="col">tool calls</th><th scope="col">wall time</th><th scope="col">cost</th></tr></thead>
             <tbody>
-              <tr><th class="text" scope="row">Opus 5.5</th><td class="text ctx">none</td><td class="text"><i class="swatch edit"></i>Edit tool</td><td>3/3</td><td>1,797</td><td>4.3</td><td>8.0</td><td>18s</td><td>$0.18</td></tr>
-              <tr><th class="text" scope="row">Opus 5.5</th><td class="text ctx">none</td><td class="text"><i class="swatch neovain"></i>neovain</td><td>3/3</td><td>1,789</td><td>4.0</td><td>4.0</td><td>24s</td><td>$0.21</td></tr>
-              <tr><th class="text" scope="row">Opus 5.5</th><td class="text ctx">none</td><td class="text"><i class="swatch neovain-ex"></i>neovain (ex-only)</td><td>3/3</td><td>1,934</td><td>3.7</td><td>4.0</td><td>24s</td><td>$0.21</td></tr>
-              <tr><th class="text" scope="row">Opus 5.5</th><td class="text ctx">250 KB preload</td><td class="text"><i class="swatch edit"></i>Edit tool</td><td>3/3</td><td>1,787</td><td>4.7</td><td>9.0</td><td>26s</td><td>$1.47</td></tr>
-              <tr><th class="text" scope="row">Opus 5.5</th><td class="text ctx">250 KB preload</td><td class="text"><i class="swatch neovain"></i>neovain</td><td>3/3</td><td>1,569</td><td>4.7</td><td>4.7</td><td>24s</td><td>$1.50</td></tr>
-              <tr><th class="text" scope="row">Opus 5.5</th><td class="text ctx">250 KB preload</td><td class="text"><i class="swatch neovain-ex"></i>neovain (ex-only)</td><td>3/3</td><td>1,807</td><td>3.7</td><td>2.7</td><td>25s</td><td>$1.46</td></tr>
-              <tr><th class="text" scope="row">Sonnet 5.5</th><td class="text ctx">none</td><td class="text"><i class="swatch edit"></i>Edit tool</td><td>3/3</td><td>2,023</td><td>4.0</td><td>10.7</td><td>17s</td><td>$0.10</td></tr>
-              <tr><th class="text" scope="row">Sonnet 5.5</th><td class="text ctx">none</td><td class="text"><i class="swatch neovain"></i>neovain</td><td>3/3</td><td>2,006</td><td>4.0</td><td>4.7</td><td>23s</td><td>$0.11</td></tr>
-              <tr><th class="text" scope="row">Sonnet 5.5</th><td class="text ctx">none</td><td class="text"><i class="swatch neovain-ex"></i>neovain (ex-only)</td><td>3/3</td><td>2,089</td><td>4.3</td><td>4.7</td><td>24s</td><td>$0.12</td></tr>
-              <tr><th class="text" scope="row">Sonnet 5.5</th><td class="text ctx">250 KB preload</td><td class="text"><i class="swatch edit"></i>Edit tool</td><td>3/3</td><td>1,961</td><td>3.3</td><td>10.0</td><td>18s</td><td>$0.75</td></tr>
-              <tr><th class="text" scope="row">Sonnet 5.5</th><td class="text ctx">250 KB preload</td><td class="text"><i class="swatch neovain"></i>neovain</td><td>3/3</td><td>2,516</td><td>5.3</td><td>5.3</td><td>31s</td><td>$0.85</td></tr>
-              <tr><th class="text" scope="row">Sonnet 5.5</th><td class="text ctx">250 KB preload</td><td class="text"><i class="swatch neovain-ex"></i>neovain (ex-only)</td><td>3/3</td><td>2,323</td><td>3.7</td><td>4.3</td><td>29s</td><td>$0.78</td></tr>
+              <tr><th class="text" scope="row">Opus 5.5</th><td class="text"><i class="swatch edit"></i>Edit tool</td><td>3/3</td><td>3/3</td><td>1,751</td><td>4.0</td><td>8.7</td><td>17s</td><td>$0.17</td></tr>
+              <tr><th class="text" scope="row">Opus 5.5</th><td class="text"><i class="swatch neovain"></i>neovain</td><td>3/3</td><td>3/3</td><td>991</td><td>3.0</td><td>2.0</td><td>14s</td><td>$0.19</td></tr>
+              <tr><th class="text" scope="row">Sonnet 5.5</th><td class="text"><i class="swatch edit"></i>Edit tool</td><td>3/3</td><td>3/3</td><td>1,862</td><td>3.3</td><td>9.7</td><td>13s</td><td>$0.10</td></tr>
+              <tr><th class="text" scope="row">Sonnet 5.5</th><td class="text"><i class="swatch neovain"></i>neovain</td><td>3/3</td><td>3/3</td><td>1,717</td><td>3.7</td><td>4.3</td><td>19s</td><td>$0.11</td></tr>
             </tbody>
           </table>
         </div>
         <!-- /generated:small -->
+
+        <div class="small-edits" id="codex">
+          <h3>Codex CLI: a smaller gap</h3>
+          <p class="note">The same tasks in OpenAI's Codex CLI, where the comparison is against Codex's own patch tool. With the strongest models the patch tool is as good as neovain or better, and it is clearly better on small edits. Codex does not retype the text it moves, and in some large runs the model wrote a script to work out its patch, so there is little left to save. With the weaker models, neovain got the code right more often on the large task.</p>
+        </div>
+        <!-- generated:codex -->
+        <h4 class="table-title">Large structural edits</h4>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th class="text" scope="col">model</th><th class="text" scope="col">tool</th><th scope="col">exact</th><th scope="col">code correct</th><th scope="col">output tokens</th><th scope="col">tool calls</th><th scope="col">wall time</th></tr></thead>
+            <tbody>
+              <tr><th class="text" scope="row">GPT-6 Astra</th><td class="text"><i class="swatch edit"></i>Patch tool</td><td>3/3</td><td>3/3</td><td>923</td><td>7.7</td><td>43s</td></tr>
+              <tr><th class="text" scope="row">GPT-6 Astra</th><td class="text"><i class="swatch neovain"></i>neovain, guidance v2</td><td>3/3</td><td>3/3</td><td>1,073</td><td>10.7</td><td>52s</td></tr>
+              <tr><th class="text" scope="row">GPT-6 Sol</th><td class="text"><i class="swatch edit"></i>Patch tool</td><td>3/3</td><td>3/3</td><td>3,372</td><td>13.3</td><td>85s</td></tr>
+              <tr><th class="text" scope="row">GPT-6 Sol</th><td class="text"><i class="swatch neovain"></i>neovain, guidance v2</td><td>3/3</td><td>3/3</td><td>3,945</td><td>22.3</td><td>110s</td></tr>
+              <tr><th class="text" scope="row">GPT-6 Luna</th><td class="text"><i class="swatch edit"></i>Patch tool</td><td class="short">0/3</td><td class="short">0/3</td><td>3,095</td><td>7.3</td><td>91s</td></tr>
+              <tr><th class="text" scope="row">GPT-6 Luna</th><td class="text"><i class="swatch neovain"></i>neovain, guidance v2</td><td class="short">0/3</td><td class="short">2/3</td><td>4,452</td><td>15.0</td><td>148s</td></tr>
+              <tr><th class="text" scope="row">GPT-5.6 Sol</th><td class="text"><i class="swatch edit"></i>Patch tool</td><td class="short">1/2</td><td class="short">1/2</td><td>6,801</td><td>10.5</td><td>148s</td></tr>
+              <tr><th class="text" scope="row">GPT-5.6 Sol</th><td class="text"><i class="swatch neovain"></i>neovain, guidance v2</td><td>2/2</td><td>2/2</td><td>4,259</td><td>12.5</td><td>103s</td></tr>
+              <tr><th class="text" scope="row">GPT-5.6 Terra</th><td class="text"><i class="swatch edit"></i>Patch tool</td><td class="short">0/2</td><td class="short">0/2</td><td>7,774</td><td>10.5</td><td>159s</td></tr>
+              <tr><th class="text" scope="row">GPT-5.6 Terra</th><td class="text"><i class="swatch neovain"></i>neovain, guidance v2</td><td class="short">1/2</td><td class="short">1/2</td><td>8,881</td><td>20.0</td><td>188s</td></tr>
+              <tr><th class="text" scope="row">GPT-5.6 Luna</th><td class="text"><i class="swatch edit"></i>Patch tool</td><td class="short">1/2</td><td class="short">1/2</td><td>9,871</td><td>17.0</td><td>199s</td></tr>
+              <tr><th class="text" scope="row">GPT-5.6 Luna</th><td class="text"><i class="swatch neovain"></i>neovain, guidance v2</td><td class="short">0/1</td><td>1/1</td><td>11,373</td><td>28.0</td><td>243s</td></tr>
+              <tr><th class="text" scope="row">GPT-5.5</th><td class="text"><i class="swatch edit"></i>Patch tool</td><td class="text ctx" colspan="5">left out: all 3 runs broke the rules</td></tr>
+              <tr><th class="text" scope="row">GPT-5.5</th><td class="text"><i class="swatch neovain"></i>neovain, guidance v2</td><td class="short">1/3</td><td>3/3</td><td>5,815</td><td>25.7</td><td>126s</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h4 class="table-title">Small edits</h4>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th class="text" scope="col">model</th><th class="text" scope="col">tool</th><th scope="col">exact</th><th scope="col">code correct</th><th scope="col">output tokens</th><th scope="col">tool calls</th><th scope="col">wall time</th></tr></thead>
+            <tbody>
+              <tr><th class="text" scope="row">GPT-6 Astra</th><td class="text"><i class="swatch edit"></i>Patch tool</td><td>3/3</td><td>3/3</td><td>681</td><td>3.0</td><td>29s</td></tr>
+              <tr><th class="text" scope="row">GPT-6 Astra</th><td class="text"><i class="swatch neovain"></i>neovain, guidance v2</td><td>3/3</td><td>3/3</td><td>798</td><td>7.3</td><td>38s</td></tr>
+              <tr><th class="text" scope="row">GPT-6 Sol</th><td class="text"><i class="swatch edit"></i>Patch tool</td><td>3/3</td><td>3/3</td><td>906</td><td>5.0</td><td>29s</td></tr>
+              <tr><th class="text" scope="row">GPT-6 Sol</th><td class="text"><i class="swatch neovain"></i>neovain, guidance v2</td><td>3/3</td><td>3/3</td><td>2,101</td><td>7.3</td><td>57s</td></tr>
+              <tr><th class="text" scope="row">GPT-6 Luna</th><td class="text"><i class="swatch edit"></i>Patch tool</td><td class="short">2/3</td><td class="short">2/3</td><td>740</td><td>3.0</td><td>23s</td></tr>
+              <tr><th class="text" scope="row">GPT-6 Luna</th><td class="text"><i class="swatch neovain"></i>neovain, guidance v2</td><td class="short">2/3</td><td>3/3</td><td>2,120</td><td>5.3</td><td>46s</td></tr>
+              <tr><th class="text" scope="row">GPT-5.6 Sol</th><td class="text"><i class="swatch edit"></i>Patch tool</td><td>2/2</td><td>2/2</td><td>932</td><td>3.0</td><td>25s</td></tr>
+              <tr><th class="text" scope="row">GPT-5.6 Sol</th><td class="text"><i class="swatch neovain"></i>neovain, guidance v2</td><td>2/2</td><td>2/2</td><td>2,316</td><td>4.5</td><td>53s</td></tr>
+              <tr><th class="text" scope="row">GPT-5.6 Terra</th><td class="text"><i class="swatch edit"></i>Patch tool</td><td>2/2</td><td>2/2</td><td>934</td><td>3.0</td><td>25s</td></tr>
+              <tr><th class="text" scope="row">GPT-5.6 Terra</th><td class="text"><i class="swatch neovain"></i>neovain, guidance v2</td><td>2/2</td><td>2/2</td><td>3,894</td><td>5.5</td><td>80s</td></tr>
+              <tr><th class="text" scope="row">GPT-5.6 Luna</th><td class="text"><i class="swatch edit"></i>Patch tool</td><td>2/2</td><td>2/2</td><td>1,181</td><td>4.0</td><td>29s</td></tr>
+              <tr><th class="text" scope="row">GPT-5.6 Luna</th><td class="text"><i class="swatch neovain"></i>neovain, guidance v2</td><td>2/2</td><td>2/2</td><td>7,701</td><td>14.5</td><td>160s</td></tr>
+              <tr><th class="text" scope="row">GPT-5.5</th><td class="text"><i class="swatch edit"></i>Patch tool</td><td>3/3</td><td>3/3</td><td>1,172</td><td>4.0</td><td>30s</td></tr>
+              <tr><th class="text" scope="row">GPT-5.5</th><td class="text"><i class="swatch neovain"></i>neovain, guidance v2</td><td>3/3</td><td>3/3</td><td>2,572</td><td>8.3</td><td>57s</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><strong>Still running:</strong> codex-5.6-medium (23 runs so far); codex-medium-v3 (not started). This table will grow as those runs finish.</p>
+        <!-- /generated:codex -->
+      </div>
+    </section>
+
+    <section id="behavior">
+      <div class="wrap">
+        <h2>How the models behaved</h2>
+        <p class="intro">Agents do not always do what they are told. Codex has no switch to turn a tool off, so its rules were set in the prompt, and every run log was checked afterwards for edits made the wrong way. Those runs are left out of the tables above and counted here, across every batch we ran.</p>
+        <!-- generated:behavior -->
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th class="text" scope="col">what happened</th><th class="text" scope="col">runs</th></tr></thead>
+            <tbody>
+              <tr><th class="text wrap" scope="row"><strong>Changed the file with the wrong tool</strong><br>These runs are left out of every table.</th><td class="text">Claude, own tool: 0 of 30<br>Claude, neovain: 0 of 78<br>Codex, own tool: 3 of 54<br>Codex, neovain: 0 of 71</td></tr>
+              <tr><th class="text wrap" scope="row"><strong>Wrong code</strong><br>A requested change was missing, incomplete or damaged other code.</th><td class="text">Claude, own tool: 0 of 30<br>Claude, neovain: 2 of 78<br>Codex, own tool: 14 of 51<br>Codex, neovain: 4 of 71</td></tr>
+              <tr><th class="text wrap" scope="row"><strong>Right code, wrong blank lines</strong><br>Most often two extra blank lines at the end of the file, after moving a class there.</th><td class="text">Claude, own tool: 0 of 30<br>Claude, neovain: 0 of 78<br>Codex, own tool: 2 of 51<br>Codex, neovain: 16 of 71</td></tr>
+              <tr><th class="text wrap" scope="row"><strong>Wrote a script to work out its patch</strong><br>Within the rules: the agent still applied the patch with its own tool. It helps explain the low token counts.</th><td class="text">Claude, own tool: 0 of 30<br>Codex, own tool: 6 of 51</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- /generated:behavior -->
+        <p class="note">Not in these counts: in an early pilot, Claude Haiku 4.5 gave up on neovain in one of three runs and wrote the file with shell commands.</p>
+        <div class="lessons">
+          <div class="against">
+            <h3>Habits we saw</h3>
+            <ul>
+              <li><span><strong>Skipping the diff.</strong> On large edits, agents sent neovain's output to <code>/dev/null</code> or filtered it. That is how a wrong edit from Claude got through.</span></li>
+              <li><span><strong>One call per change.</strong> Before the guidance said otherwise, Codex made a neovain call for each change, twelve in one run. Claude chained its steps without being told.</span></li>
+              <li><span><strong>Doubled backslashes.</strong> Codex wrote <code>\\&lt;word\\&gt;</code> on its first try at a rename, which matches nothing. neovain refused the call and the next one was right.</span></li>
+            </ul>
+          </div>
+          <div class="for">
+            <h3>What helped</h3>
+            <ul>
+              <li><span><strong>Saying how, not only what.</strong> Telling agents to mind the blank lines changed nothing, so the guidance now gives a method. For Claude it cut output on the large task. Its Codex runs are still in progress.</span></li>
+              <li><span><strong>All-or-nothing calls.</strong> Every call that failed left the file untouched, and the agent recovered on its next call.</span></li>
+              <li><span><strong>Checking the logs.</strong> The first version of our rule check missed a model that rewrote the file with Python. An edit count of zero gave it away.</span></li>
+            </ul>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -273,17 +357,17 @@ or use @N@</span>
           <div class="for">
             <h3>Reach for neovain when</h3>
             <ul>
-              <li><span>A change moves, deletes or re-indents large blocks. The Edit tool retypes them; Vim's <code>:m</code>, <code>:d</code> and <code>&gt;</code> don't.</span></li>
+              <li><span>A change moves, deletes or re-indents large blocks. Claude's Edit tool retypes them; Vim's <code>:m</code>, <code>:d</code> and <code>&gt;</code> don't.</span></li>
               <li><span>The same change repeats across a file: <code>:%s</code> and <code>:g</code> do it in one step.</span></li>
               <li><span>You want all-or-nothing edits. A failed step leaves the file untouched, and agents recover on the next call.</span></li>
             </ul>
           </div>
           <div class="against">
-            <h3>Stick with string replacement when</h3>
+            <h3>Stick with the agent's own tool when</h3>
             <ul>
-              <li><span>The change is small and local. Writing the new text directly is the reasoning; with Vim, the agent has to work out the keystrokes too.</span></li>
+              <li><span>The change is small and local. Writing the new text directly is the reasoning; with Vim, the agent has to work out the commands too.</span></li>
+              <li><span>The tool already avoids retyping. Codex's patch tool does, and neovain saved little there.</span></li>
               <li><span>The model is small. In an early pilot, Claude Haiku 4.5 needed about three times as long with neovain and failed one run in three.</span></li>
-              <li><span>Nobody will read the diff. Range arithmetic can go wrong and still be valid Vim; that is how the one failed large run happened.</span></li>
             </ul>
           </div>
         </div>

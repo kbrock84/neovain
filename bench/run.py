@@ -61,8 +61,65 @@ TOOLS = {
 }
 
 NEOVAIN_CALL = re.compile(r"""(?:^|[\s;&|('"])(?:\S*/)?neovain(?:\s|$)""")
-# Bash commands that change work.py without going through neovain break the rules of either arm.
-ILLEGAL_WRITE = re.compile(r"(sed\s+-i|>\s*work\.py|tee\s+work\.py|open\([^)]*work\.py[^)]*['\"][wa])")
+# Shell commands that write a file. The first version of this check knew only sed -i, redirects and
+# open(..., "w"), and missed a model that rewrote work.py with Path.write_text and piped patches.
+# A script that only prints a patch is not a write: the agent still has to apply it with its tool.
+SHELL_WRITE = re.compile(
+    r"sed\s+(-[a-zA-Z]*\s+)*-[a-zA-Z]*i"
+    r"|perl\s+(-[a-zA-Z]*\s+)*-[a-zA-Z]*i"
+    r"|>>?\s*\S*work\.py"
+    r"|\btee\b[^|;]*work\.py"
+    r"|\b(mv|cp|install)\b[^|;]*\s\S*work\.py\s*($|[;&|\"'])"
+    r"|write_text|writelines|\.write\("
+    r"|open\([^)]*['\"][wa]\+?b?['\"]"
+    r"|\bapply_patch\s*<|\|\s*apply_patch\b"
+    r"|\bpatch\s+(-p\d|-i\b|<)|\bgit\s+apply\b"
+    r"|\b(ed|ex|vim?|nvim)\s+(-\S+\s+)*\S*work\.py"
+    r"|\bawk\b[^|;]*-i\s*inplace"
+)
+
+
+def stream_commands(path: Path):
+    """Yield ("shell", command) and ("tool", name) for every action in a Claude or Codex run log."""
+    for line in path.read_text(errors="replace").splitlines():
+        try:
+            ev = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        item = ev.get("item") or {}
+        if ev.get("type") == "item.completed" and item.get("type") == "command_execution":
+            yield "shell", item.get("command") or ""
+        elif ev.get("type") == "item.completed" and item.get("type") == "file_change":
+            if any(Path(c.get("path") or "").name == "work.py" for c in item.get("changes") or []):
+                yield "tool", "apply_patch"
+        elif ev.get("type") == "assistant":
+            for b in (ev.get("message") or {}).get("content") or []:
+                if isinstance(b, dict) and b.get("type") == "tool_use":
+                    if b["name"] == "Bash":
+                        yield "shell", b["input"].get("command", "")
+                    elif b["name"] in ("Edit", "Write", "MultiEdit", "NotebookEdit"):
+                        yield "tool", b["name"]
+
+
+def scan_violations(path: Path, arm: str) -> list[str]:
+    """Every edit made outside the arm's allowed tool, as short descriptions.
+
+    In the edit arm only the agent's own file-editing tool may change work.py, and the shell may
+    only read. In a neovain arm only neovain calls may change it.
+    """
+    found = []
+    for kind, text in stream_commands(path):
+        if kind == "tool":
+            if arm != "edit":
+                found.append(f"{text} used in a neovain arm")
+        elif NEOVAIN_CALL.search(text):
+            if arm == "edit":
+                found.append("neovain used in the edit arm")
+        elif "work.py" in text or "apply_patch" in text:
+            match = SHELL_WRITE.search(text)
+            if match:
+                found.append(f"shell write: {match.group(0).strip()[:24]}")
+    return found
 
 
 def preload(kb: int) -> str:
@@ -125,7 +182,7 @@ def run_one(a, task: str, model: str, arm: str, kb: int, rep: int, background: d
     row = {"task": task, "model": model, "arm": arm, "ctx_kb": kb, "rep": rep, "wall_s": round(wall, 1),
            "pass": check.returncode == 0, "check": check.stdout.strip(), "exit": proc.returncode}
     stream = d / "stream.jsonl"
-    row.update(parse_codex_stream(stream, arm) if a.agent == "codex" else parse_stream(stream))
+    row.update(parse_codex_stream(stream, arm) if a.agent == "codex" else parse_stream(stream, arm))
     row["code_ok"] = code_ok(row["pass"], row["check"])
     row["agent"] = a.agent
     # "default" means the CLI chose: Codex models each have their own default level.
@@ -136,8 +193,8 @@ def run_one(a, task: str, model: str, arm: str, kb: int, rep: int, background: d
     return row
 
 
-def parse_stream(path: Path) -> dict:
-    tool_counts, edit_calls, edit_failed, violations = {}, 0, 0, 0
+def parse_stream(path: Path, arm: str) -> dict:
+    tool_counts, edit_calls, edit_failed = {}, 0, 0
     pending = {}  # tool_use id -> is edit call
     msg_ids = set()  # distinct model responses = real API round trips
     result = {}
@@ -160,8 +217,6 @@ def parse_stream(path: Path) -> dict:
                 command = b["input"].get("command", "") if name == "Bash" else ""
                 calls_neovain = bool(NEOVAIN_CALL.search(command))
                 is_edit = name == "Edit" or calls_neovain
-                if not calls_neovain and ILLEGAL_WRITE.search(command):
-                    violations += 1
                 edit_calls += is_edit
                 pending[b["id"]] = is_edit
             elif b.get("type") == "tool_result" and pending.get(b.get("tool_use_id")):
@@ -183,7 +238,7 @@ def parse_stream(path: Path) -> dict:
         "tools": tool_counts,
         "edit_calls": edit_calls,
         "edit_failed": edit_failed,
-        "violations": violations,
+        "violations": len(scan_violations(path, arm)),
         "subtype": result.get("subtype"),
         "model_id": ",".join(sorted(result.get("modelUsage") or {})),
         "api_error": result.get("result") if result.get("is_error") or not result else None,
@@ -211,11 +266,10 @@ rejected. Insert text with :a, :i or :c.""",
 def parse_codex_stream(path: Path, arm: str) -> dict:
     """Metrics from `codex exec --json`. Codex reports neither cost nor the number of model requests.
 
-    Codex has no flags to switch tools off, so the arms are enforced by the prompt alone. A run that
-    edits work.py the wrong way (apply_patch in a neovain arm, the shell in the edit arm) is counted
-    under violations.
+    Codex has no flags to switch tools off, so the arms are enforced by the prompt alone, and
+    scan_violations finds the runs that edited work.py the wrong way.
     """
-    counts, edit_calls, edit_failed, violations = {}, 0, 0, 0
+    counts, edit_calls, edit_failed = {}, 0, 0
     usage = {"input_tokens": 0, "cached_input_tokens": 0, "output_tokens": 0, "reasoning_output_tokens": 0}
     turns, error = 0, None
     for line in path.read_text().splitlines():
@@ -232,21 +286,15 @@ def parse_codex_stream(path: Path, arm: str) -> dict:
             error = json.dumps(ev.get("error") or ev.get("message") or ev)[:300]
         elif kind == "item.completed" and item.get("type") == "command_execution":
             counts["shell"] = counts.get("shell", 0) + 1
-            command = item.get("command") or ""
-            if NEOVAIN_CALL.search(command):
+            if NEOVAIN_CALL.search(item.get("command") or ""):
                 edit_calls += 1
-                violations += arm == "edit"
                 if "FAILED at step" in (item.get("aggregated_output") or "") or item.get("exit_code") not in (0, None):
                     edit_failed += 1
-            elif ILLEGAL_WRITE.search(command):
-                violations += 1
         elif kind == "item.completed" and item.get("type") == "file_change":
             counts["apply_patch"] = counts.get("apply_patch", 0) + 1
             if arm == "edit":
                 edit_calls += 1
                 edit_failed += item.get("status") != "completed"
-            elif any(Path(c.get("path") or "").name == "work.py" for c in item.get("changes") or []):
-                violations += 1
     if error is None and turns == 0:
         error = "codex finished no turn"
     return {
@@ -262,7 +310,7 @@ def parse_codex_stream(path: Path, arm: str) -> dict:
         "tools": counts,
         "edit_calls": edit_calls,
         "edit_failed": edit_failed,
-        "violations": violations,
+        "violations": len(scan_violations(path, arm)),
         "subtype": None,
         "model_id": None,
         "api_error": error,

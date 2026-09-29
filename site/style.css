@@ -194,6 +194,11 @@ tbody tr { border-top: 1px solid var(--rule); }
 td .swatch { margin-right: 8px; }
 td.ctx { color: var(--text-2); }
 td.short { font-weight: 600; }
+th.wrap { height: auto; padding: 12px 24px 12px 0; white-space: normal; font: 14px/1.5 var(--sans); color: var(--text-2); }
+th.wrap strong { font: 600 13px/1.5 var(--mono); color: var(--text); }
+th.wrap + td { padding-top: 12px; padding-bottom: 12px; line-height: 1.7; vertical-align: top; }
+.table-title { margin: 24px 0 8px; font: 600 14px/1.4 var(--mono); }
+#behavior .table-wrap { margin-top: 32px; }
 .small-edits { margin: 56px 0 24px; }
 .small-edits h3 { margin-bottom: 8px; }
 
@@ -206,6 +211,7 @@ td.short { font-weight: 600; }
 .lessons .for li::before { content: "+"; color: var(--added); }
 .lessons .against li::before { content: "-"; color: var(--removed); }
 .lessons code, .closing code { font-size: 14px; color: var(--text); }
+.lessons strong { color: var(--text); font-weight: 600; }
 .closing { max-width: 780px; font-size: 17px; color: var(--text-2); }
 
 /* Footer */
