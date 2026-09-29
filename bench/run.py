@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run the neovain-vs-Edit benchmark matrix with headless `claude -p` and summarize it.
 
-  python3 run.py [--models opus,sonnet] [--arms edit,neovain,neovain-ex] [--context-kb 0,400]
+  python3 run.py [--models opus,sonnet] [--arms edit,neovain,neovain-ex] [--task small,large] [--context-kb 0,250]
                  [--reps 3] [-j 3] [--out runs] [--bin neovain]
   python3 run.py --summarize-only --out runs
 
@@ -13,7 +13,7 @@ Arms:
 --context-kb N preloads N KB of real source code (Neovim's Lua runtime) into the prompt so every
 turn carries a large context, as in a long real session. The prompt is sent on stdin.
 
-Each run gets a fresh copy of fixture.py as work.py. Results are appended to <out>/results.jsonl,
+Each run gets a fresh copy of tasks/TASK/fixture.py as work.py. Results are appended to <out>/results.jsonl,
 and a per-(model, arm, context) summary table is printed at the end.
 """
 import argparse
@@ -82,12 +82,12 @@ def preload(kb: int) -> str:
             "They are not needed for the task that follows.\n\n" + "\n".join(chunks) + "\n\n===== END OF BACKGROUND =====\n\n")
 
 
-def run_one(a, model: str, arm: str, kb: int, rep: int, background: dict) -> dict:
-    d = a.out / f"{model}_{arm}_ctx{kb}_{rep}"
+def run_one(a, task: str, model: str, arm: str, kb: int, rep: int, background: dict) -> dict:
+    d = a.out / f"{task}_{model}_{arm}_ctx{kb}_{rep}"
     shutil.rmtree(d, ignore_errors=True)
     d.mkdir(parents=True)
-    shutil.copy(HERE / "fixture.py", d / "work.py")
-    shutil.copy(HERE / "TASKS.md", d / "TASKS.md")
+    shutil.copy(HERE / "tasks" / task / "fixture.py", d / "work.py")
+    shutil.copy(HERE / "tasks" / task / "TASKS.md", d / "TASKS.md")
     allowed, denied = TOOLS[arm]
     cmd = ["claude", "-p", "--model", model, "--output-format", "stream-json", "--verbose",
            "--allowedTools", *allowed, "--disallowedTools", *denied, "--max-turns", "40"]
@@ -98,8 +98,8 @@ def run_one(a, model: str, arm: str, kb: int, rep: int, background: dict) -> dic
         proc = subprocess.run(cmd, cwd=d, input=prompt, stdout=f, stderr=subprocess.PIPE, text=True,
                               timeout=1200, env=env)
     wall = time.monotonic() - t0
-    check = subprocess.run(["python3", str(HERE / "check.py"), str(d / "work.py")], capture_output=True, text=True)
-    row = {"model": model, "arm": arm, "ctx_kb": kb, "rep": rep, "wall_s": round(wall, 1),
+    check = subprocess.run(["python3", str(HERE / "tasks" / task / "check.py"), str(d / "work.py")], capture_output=True, text=True)
+    row = {"task": task, "model": model, "arm": arm, "ctx_kb": kb, "rep": rep, "wall_s": round(wall, 1),
            "pass": check.returncode == 0, "check": check.stdout.strip(), "exit": proc.returncode}
     row.update(parse_stream(d / "stream.jsonl"))
     if proc.returncode != 0:
@@ -179,14 +179,14 @@ def summarize(rows: list[dict]) -> None:
         return
     groups = {}
     for r in rows:
-        groups.setdefault((r["model"], r.get("ctx_kb", 0), r["arm"]), []).append(r)
-    cols = ["model", "ctx_kb", "arm", "n", "pass", "out_tok", "think_tok", "turns", "api_requests", "tool_calls", "edit_calls",
+        groups.setdefault((r.get("task", "small"), r["model"], r.get("ctx_kb", 0), r["arm"]), []).append(r)
+    cols = ["task", "model", "ctx_kb", "arm", "n", "pass", "out_tok", "think_tok", "turns", "api_requests", "tool_calls", "edit_calls",
             "edit_failed", "violations", "cache_read_tok", "wall_s", "cost_usd"]
     table = []
-    for (model, kb, arm), rs in sorted(groups.items()):
-        table.append({"model": model, "ctx_kb": str(kb), "arm": arm, "n": str(len(rs)),
+    for (task, model, kb, arm), rs in sorted(groups.items()):
+        table.append({"task": task, "model": model, "ctx_kb": str(kb), "arm": arm, "n": str(len(rs)),
                       "pass": f"{sum(r['pass'] for r in rs)}/{len(rs)}",
-                      **{c: ms([r.get(c) for r in rs]) for c in cols[5:]}})
+                      **{c: ms([r.get(c) for r in rs]) for c in cols[6:]}})
     w = {c: max(len(c), *(len(t[c]) for t in table)) for c in cols}
     print("  ".join(c.ljust(w[c]) for c in cols))
     for t in table:
@@ -213,6 +213,7 @@ def main():
     ap.add_argument("--models", default="opus,sonnet")
     ap.add_argument("--arms", default="edit,neovain,neovain-ex")
     ap.add_argument("--context-kb", default="0", help="comma-separated preload sizes in KB, e.g. 0,400")
+    ap.add_argument("--task", default="small", help="task set(s) under tasks/, comma-separated: small,large")
     ap.add_argument("--reps", type=int, default=3)
     ap.add_argument("-j", "--jobs", type=int, default=3)
     ap.add_argument("--out", type=Path, default=HERE / "runs")
@@ -225,13 +226,13 @@ def main():
         a.out.mkdir(parents=True, exist_ok=True)
         sizes = [int(k) for k in a.context_kb.split(",")]
         background = {kb: preload(kb) for kb in sizes}
-        jobs = [(m, arm, kb, r) for r in range(1, a.reps + 1) for kb in sizes
+        jobs = [(t, m, arm, kb, r) for r in range(1, a.reps + 1) for t in a.task.split(",") for kb in sizes
                 for m in a.models.split(",") for arm in a.arms.split(",")]
         with ThreadPoolExecutor(a.jobs) as ex, open(results, "a") as f:
             for row in ex.map(lambda j: run_one(a, *j, background), jobs):
                 f.write(json.dumps(row) + "\n")
                 f.flush()
-                tag = f"{row['model']:6} ctx{row['ctx_kb']:<4} {row['arm']:10} #{row['rep']}"
+                tag = f"{row['task']:5} {row['model']:6} ctx{row['ctx_kb']:<4} {row['arm']:10} #{row['rep']}"
                 if row["api_error"]:
                     print(f"{tag}  ERROR  {row['api_error']}", flush=True)
                     continue
