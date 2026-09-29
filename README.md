@@ -7,6 +7,8 @@
 
 # neovain
 
+*neovain is Neovim plus VAIN, the Vim Agent INterface.*
+
 Transactional vim editing for AI agents. One call applies a sequence of vim keystrokes and
 ex commands to a file using headless Neovim. If every step succeeds, the file is written and
 a unified diff is printed. If any step fails, nothing is written.
