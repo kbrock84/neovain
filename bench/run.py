@@ -110,6 +110,7 @@ def run_one(a, model: str, arm: str, kb: int, rep: int, background: dict) -> dic
 def parse_stream(path: Path) -> dict:
     tool_counts, edit_calls, edit_failed, violations = {}, 0, 0, 0
     pending = {}  # tool_use id -> is edit call
+    msg_ids = set()  # distinct model responses = real API round trips
     result = {}
     for line in path.read_text().splitlines():
         try:
@@ -119,6 +120,8 @@ def parse_stream(path: Path) -> dict:
         if ev.get("type") == "result":
             result = ev
         msg = ev.get("message") or {}
+        if ev.get("type") == "assistant" and msg.get("id"):
+            msg_ids.add(msg["id"])
         for b in msg.get("content") or []:
             if not isinstance(b, dict):
                 continue
@@ -145,6 +148,7 @@ def parse_stream(path: Path) -> dict:
         "cache_write_tok": usage.get("cache_creation_input_tokens"),
         "cost_usd": result.get("total_cost_usd"),
         "turns": result.get("num_turns"),
+        "api_requests": len(msg_ids),
         "api_s": round((result.get("duration_api_ms") or 0) / 1000, 1),
         "tool_calls": sum(tool_counts.values()),
         "tools": tool_counts,
@@ -176,7 +180,7 @@ def summarize(rows: list[dict]) -> None:
     groups = {}
     for r in rows:
         groups.setdefault((r["model"], r.get("ctx_kb", 0), r["arm"]), []).append(r)
-    cols = ["model", "ctx_kb", "arm", "n", "pass", "out_tok", "think_tok", "turns", "tool_calls", "edit_calls",
+    cols = ["model", "ctx_kb", "arm", "n", "pass", "out_tok", "think_tok", "turns", "api_requests", "tool_calls", "edit_calls",
             "edit_failed", "violations", "cache_read_tok", "wall_s", "cost_usd"]
     table = []
     for (model, kb, arm), rs in sorted(groups.items()):

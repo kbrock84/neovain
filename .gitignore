@@ -2,3 +2,10 @@
 /bench/runs
 __pycache__/
 *.neovain~
+
+# Planning notes and agent plan files stay local.
+PLAN.md
+PLAN-*.md
+*.plan.md
+/plans/
+/.claude/plans/
