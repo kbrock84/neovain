@@ -25,7 +25,7 @@ DEFAULT_EFFORT = {
     "opus": "medium", "sonnet": "medium",
     "gpt-5.6-sol": "low", "gpt-5.6-terra": "medium", "gpt-5.6-luna": "medium",
 }
-KEEP = ["out_tok", "think_tok", "api_requests", "tool_calls", "edit_calls", "edit_failed", "cost_usd"]
+KEEP = ["out_tok", "think_tok", "api_requests", "tool_calls", "edit_calls", "edit_failed", "edits_discarded", "cost_usd"]
 
 
 def run_dir(batch_dir: Path, row: dict) -> Path:

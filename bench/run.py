@@ -101,6 +101,28 @@ def stream_commands(path: Path):
                         yield "tool", b["name"]
 
 
+# A neovain call whose output the agent never sees: sent to /dev/null, or piped into a filter.
+# Redirecting only stderr (2>/dev/null) does not count.
+OUTPUT_DISCARDED = re.compile(
+    r"(?<![0-9&])>\s*/dev/null"
+    r"|&>\s*/dev/null"
+    r"|1>\s*/dev/null"
+    r"|\|\s*(grep|egrep|rg|tail|head|wc|sed|awk|cut)\b"
+)
+
+
+def discarded_calls(path: Path) -> int:
+    """How many neovain calls in a run log threw their output away or filtered it."""
+    count = 0
+    for kind, text in stream_commands(path):
+        if kind != "shell":
+            continue
+        call = NEOVAIN_CALL.search(text)
+        if call and "--help" not in text and OUTPUT_DISCARDED.search(text[call.start():]):
+            count += 1
+    return count
+
+
 def scan_violations(path: Path, arm: str) -> list[str]:
     """Every edit made outside the arm's allowed tool, as short descriptions.
 
@@ -238,6 +260,7 @@ def parse_stream(path: Path, arm: str) -> dict:
         "tools": tool_counts,
         "edit_calls": edit_calls,
         "edit_failed": edit_failed,
+        "edits_discarded": discarded_calls(path),
         "violations": len(scan_violations(path, arm)),
         "subtype": result.get("subtype"),
         "model_id": ",".join(sorted(result.get("modelUsage") or {})),
@@ -310,6 +333,7 @@ def parse_codex_stream(path: Path, arm: str) -> dict:
         "tools": counts,
         "edit_calls": edit_calls,
         "edit_failed": edit_failed,
+        "edits_discarded": discarded_calls(path),
         "violations": len(scan_violations(path, arm)),
         "subtype": None,
         "model_id": None,
