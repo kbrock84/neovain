@@ -153,7 +153,8 @@
 - Start each edit with a content anchor: '@^def name' (must match exactly one line).
 - Use ex commands for structural or bulk edits: :%s, :g/pat/d, :m (move), :t (copy), :&gt;
 - A range can end at a pattern: ':.,/^class Next/-1d' deletes up to the line before it.
-- When you move or delete a block, take its blank lines with it, then check both seams.
+- A block owns the blank lines above it. Select both: ':-2,/^\S/-3' runs from two lines above the
+  anchor to the block's last line of code. Then moves and deletes leave the spacing intact.
 - Insert literal text with :a / :i / :c, ending with a line containing only "."
 - Preview with --dry-run, then send the same command without it.
 - Check the result. A wrong edit that is still valid vim does not fail.</pre>

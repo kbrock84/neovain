@@ -75,11 +75,29 @@ cursor was on line 1; file unchanged
 4. **Use ex commands for structural and bulk work.** A range can end at a pattern:
    `:.,/^class Next/-1d` deletes from the cursor line to the line before `class Next`.
    `:m` moves a range, `:t` copies it, `>` indents it, `:%s` and `:g` change every match.
-5. **Mind the seams.** When you delete or move a block, take its blank lines with it, then
-   check the blank lines where it left and where it landed.
+5. **A block owns the blank lines above it.** Select a block together with the blank lines
+   above it, and stop at its last line of code. Where two blank lines separate top-level
+   blocks:
+
+   ```
+   '@^class Report' ':-2,/^\S/-3d'                  delete the class
+   '@^class Report' ':-2,/^\S/-3m$'                 move it to the end of the file
+   '@^class Report' ':-2,/^\S/-3m?^class Cache?-3'  move it above class Cache
+   ```
+
+   `-2` starts two lines above the anchor, on the block's blank lines. `/^\S/-3` ends three
+   lines before the next top-level line, on the block's last line of code. A block selected
+   this way takes its separator along and leaves none behind, so nothing piles up where it
+   was, and a block moved to the end leaves no blank lines at the end of the file. Match the
+   numbers to the file's spacing: with one blank line between methods, use `-1` and
+   `/^    def /-2`. For the last block in a file there is no next line to search for, so end
+   the range with `$`.
 6. **Preview, then run.** Add `--dry-run` to see the diff, then send the same command without it.
 7. **Check the result.** A wrong edit that is still valid vim does not fail. Read the diff, and
-   after a large change confirm the structure, for example with `rg -n '^(class|def) '`.
+   after a large change confirm the structure and the spacing: `rg -n -B3 '^(class|def) '`
+   shows the lines above each top-level block, and `tail -c 50 FILE | od -c` shows how the
+   file ends. To repair spacing, `:%s/\n\{4,}/\r\r\r/e` cuts runs of three or more blank lines
+   down to two, and `:%s/\n\+\%$//e` removes blank lines at the end of the file.
 8. **Quote each step in single quotes.** Backslashes inside single quotes reach neovain as
    written, so write `\<word\>` once, not doubled.
 
