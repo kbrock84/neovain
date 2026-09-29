@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run the neovain-vs-Edit benchmark matrix with headless `claude -p` and summarize it.
 
-  python3 run.py [--agent codex] [--models opus,sonnet] [--arms edit,neovain,neovain-ex] [--task small,large] [--context-kb 0,250]
+  python3 run.py [--agent codex] [--effort medium] [--models opus,sonnet] [--arms edit,neovain,neovain-ex] [--task small,large] [--context-kb 0,250]
                  [--reps 3] [-j 3] [--out runs] [--bin neovain]
   python3 run.py --summarize-only --out runs
 
@@ -89,11 +89,14 @@ def run_one(a, task: str, model: str, arm: str, kb: int, rep: int, background: d
     shutil.copy(HERE / "tasks" / task / "fixture.py", d / "work.py")
     shutil.copy(HERE / "tasks" / task / "TASKS.md", d / "TASKS.md")
     if a.agent == "codex":
-        cmd = ["codex", "exec", "--json", "--skip-git-repo-check", "--sandbox", "workspace-write", "-m", model, "-"]
+        effort = ["-c", f'model_reasoning_effort="{a.effort}"'] if a.effort else []
+        cmd = ["codex", "exec", "--json", "--skip-git-repo-check", "--sandbox", "workspace-write", "-m", model,
+               *effort, "-"]
         prompt = background[kb] + codex_prompts(a.bin)[arm]
     else:
         allowed, denied = TOOLS[arm]
-        cmd = ["claude", "-p", "--model", model, "--output-format", "stream-json", "--verbose",
+        effort = ["--effort", a.effort] if a.effort else []
+        cmd = ["claude", "-p", "--model", model, *effort, "--output-format", "stream-json", "--verbose",
                "--allowedTools", *allowed, "--disallowedTools", *denied, "--max-turns", "40"]
         prompt = background[kb] + prompts(a.bin)[arm]
     env = {**os.environ, "NEOVAIN_EX_ONLY": "1" if arm == "neovain-ex" else "0"}
@@ -108,6 +111,8 @@ def run_one(a, task: str, model: str, arm: str, kb: int, rep: int, background: d
     stream = d / "stream.jsonl"
     row.update(parse_codex_stream(stream, arm) if a.agent == "codex" else parse_stream(stream))
     row["agent"] = a.agent
+    # "default" means the CLI chose: Codex models each have their own default level.
+    row["effort"] = a.effort or "default"
     row["model_id"] = row["model_id"] or model
     if proc.returncode != 0:
         row["stderr"] = proc.stderr[-500:]
@@ -304,6 +309,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--agent", default="claude", choices=["claude", "codex"], help="which CLI runs the task")
     ap.add_argument("--models", default="opus,sonnet")
+    ap.add_argument("--effort", default="", help="reasoning effort to request, e.g. low, medium, high "
+                    "(default: leave it to the CLI, which for Codex differs per model)")
     ap.add_argument("--arms", default="edit,neovain,neovain-ex")
     ap.add_argument("--context-kb", default="0", help="comma-separated preload sizes in KB, e.g. 0,400")
     ap.add_argument("--task", default="small", help="task set(s) under tasks/, comma-separated: small,large")
