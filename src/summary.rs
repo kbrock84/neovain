@@ -1542,22 +1542,31 @@ mod tests {
     /// Time is measured only in a build like the one that is released.
     #[cfg(not(debug_assertions))]
     #[test]
-    fn many_blocks_take_little_time() {
-        // Every line is a block that moved. No step may compare each block with every other.
-        let old: String = (0..120_000).map(|i| format!("line {i}\n")).collect();
-        let new: String = (0..120_000).rev().map(|i| format!("line {i}\n")).collect();
-        let started = Instant::now();
-        let found = compare(old, new);
-        let text = render(&found, "f.txt", &totals());
-        assert!(started.elapsed() < Duration::from_secs(3), "{:?}", started.elapsed());
-        assert_eq!(found.blocks.len(), 119_999);
-        assert!(text.lines().count() <= OUTPUT_MAX_LINES && text.contains(" blocks not shown; "), "{text}");
-
-        // Every other line changed, and no two in the same way.
-        let new: String = (0..120_000).map(|i| format!("line {i}{}\n", if i % 2 == 0 { " + more" } else { "" })).collect();
-        let found = compare((0..120_000).map(|i| format!("line {i}\n")).collect::<String>(), new);
-        assert_eq!(found.blocks.len(), 60_000);
-        assert!(started.elapsed() < Duration::from_secs(3), "{:?}", started.elapsed());
+    fn many_blocks_take_time_in_proportion() {
+        // Every line is a block: all lines in reverse order, or every other line changed.
+        let lines = |count: usize| (0..count).map(|i| format!("line {i}\n"));
+        let reversed = |count: usize| (lines(count).collect::<String>(), lines(count).rev().collect::<String>());
+        let changed = |count: usize| {
+            let other = |(i, line): (usize, String)| if i % 2 == 0 { line.replace('\n', " + more\n") } else { line };
+            (lines(count).collect::<String>(), lines(count).enumerate().map(other).collect::<String>())
+        };
+        let time = |(old, new): (String, String), blocks: usize| {
+            let started = Instant::now();
+            let found = compare(old, new);
+            let text = render(&found, "f.txt", &totals());
+            assert_eq!(found.blocks.len(), blocks);
+            assert!(text.lines().count() <= OUTPUT_MAX_LINES && text.contains(" blocks not shown; "), "{text}");
+            started.elapsed()
+        };
+        let times = [
+            (time(reversed(30_000), 29_999), time(reversed(120_000), 119_999)),
+            (time(changed(30_000), 15_000), time(changed(120_000), 60_000)),
+        ];
+        // Four times the lines take four times as long, and sixteen times as long if each
+        // block is compared with every other. On a slow machine only the ratio tells.
+        for (small, large) in times {
+            assert!(large < Duration::from_secs(3) || large < small * 10, "{small:?} for 30,000 lines, {large:?} for 120,000");
+        }
     }
 
     #[test]
