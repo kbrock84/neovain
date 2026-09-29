@@ -2,6 +2,7 @@
 
   python3 gen.py > fixture.py
 """
+import sys
 import random
 
 R = random.Random(20260929)
@@ -102,7 +103,8 @@ def main():
     out = header
     for block in top:
         out += ["", ""] + block
-    print("\n".join(out))
+    # Write bytes so the fixture has LF line endings on every platform (print would emit CRLF on Windows).
+    sys.stdout.buffer.write(("\n".join(out) + "\n").encode())
 
 
 if __name__ == "__main__":
