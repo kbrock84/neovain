@@ -26,13 +26,13 @@ INDEX = SITE / "index.html"
 
 CLAUDE = ["opus", "sonnet"]
 CODEX = ["gpt-6-astra", "gpt-6-sol", "gpt-6-luna", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.5"]
-# Codex batches shown on the site: how many runs each has when complete, and what to call it.
-# A batch appears in the tables only once it is complete, so no row rests on one or two runs.
-CODEX_BATCHES = {
-    "codex-gpt6-medium": (48, "GPT-6 and GPT-5.5 with both tools"),
-    "codex-5.6-medium": (36, "GPT-5.6 with both tools"),
-    "codex-medium-v3": (42, "neovain with guidance v3, all seven models"),
-}
+# The release the site shows. Its tables compare each agent's own tool with this version of neovain.
+CURRENT = "0.2.0"
+# Batches behind the site's tables: both tools at medium effort, and neovain 0.2.0.
+SHOWN = ["claude-medium", "codex-gpt6-medium", "codex-5.6-medium",
+         "claude-0.2.0-small", "claude-0.2.0-large", "codex-0.2.0-small", "codex-0.2.0-large"]
+# Batches behind the write-up's version tables: everything at medium effort, plus Claude's first round.
+HISTORY = SHOWN + ["claude-r1-small", "claude-r1-large", "claude-medium-v2", "codex-medium-v3"]
 METRICS = ["out_tok", "think_tok", "tool_calls", "edit_calls", "wall_s"]
 BAR_MAX = 60  # percent of the row, the longest bar in a chart; the rest of the row holds the value
 
@@ -186,11 +186,16 @@ def chart(title, sub, metric, unit, fmt, cells):
     return lines
 
 
+def version(row):
+    """What the neovain arm ran with: the release, and for 0.1.0 the guidance it read."""
+    if row["arm"] == "edit":
+        return None
+    return "0.2.0" if row.get("tool") == "0.2.0" else f"0.1.0, guidance {row['guidance']}"
+
+
 def tool_label(s):
     if s["arm"] == "edit":
         return "Edit tool" if s["agent"] == "claude" else "Patch tool"
-    if s["agent"] == "codex":
-        return f"neovain, guidance {s['guidance']}"
     return "neovain"
 
 
@@ -224,25 +229,33 @@ def table(cells, claude):
     return lines
 
 
-def with_excluded(rows, s, **want):
-    """A cell with no valid runs still needs its labels for the table row."""
-    if s["n"]:
-        return s
-    any_row = next(r for r in rows if all(r[k] == v for k, v in want.items()))
-    s.update(model=any_row["model"], model_name=any_row["model_name"], arm=any_row["arm"],
-             agent=any_row["agent"], guidance=any_row["guidance"])
+def pick(rows, model, task, arm, ver=None):
+    """One table cell: the runs of one model, task and arm, for the neovain arm of one version."""
+    mine = [r for r in rows if r["model"] == model and r["task"] == task and r["arm"] == arm
+            and r.get("ctx_kb", 0) == 0 and version(r) == ver]
+    if not mine:
+        return None
+    s = summary(mine)
+    s.update(model=mine[0]["model"], model_name=mine[0]["model_name"], arm=arm, agent=mine[0]["agent"],
+             guidance=mine[0]["guidance"], version=ver)
     return s
 
 
-def codex_cells(rows, task, batches):
-    rows = [r for r in rows if r["batch"] in batches and r["task"] == task]
-    cells = []
-    for model in CODEX:
-        for arm, guidance in (("edit", None), ("neovain", "v2"), ("neovain", "v3")):
-            want = dict(model=model, arm=arm, guidance=guidance)
-            if any(all(r[k] == v for k, v in want.items()) for r in rows):
-                cells.append(with_excluded(rows, cell(rows, **want), **want))
-    return cells
+def cells_for(rows, models, task, versions):
+    """The edit arm and the chosen versions of the neovain arm, model by model."""
+    out = []
+    for model in models:
+        for arm, ver in [("edit", None)] + [("neovain", v) for v in versions]:
+            s = pick(rows, model, task, arm, ver)
+            if s:
+                out.append(s)
+    return out
+
+
+def discarded(rows, agent, ver):
+    mine = [r for r in rows if r["agent"] == agent and r["arm"] == "neovain" and r["task"] == "large"
+            and r["valid"] and (r.get("tool") == "0.2.0") == (ver == "0.2.0")]
+    return sum(r["edits_discarded"] > 0 for r in mine), len(mine)
 
 
 def behavior(rows):
@@ -259,6 +272,12 @@ def behavior(rows):
                 out.append(f"{name}, {tool}: {k} of {n}")
         return out
 
+    thrown = []
+    for agent, name in (("claude", "Claude"), ("codex", "Codex")):
+        for ver in ("0.1.0", "0.2.0"):
+            k, n = discarded(rows, agent, ver)
+            thrown.append(f"{name}, neovain {ver}: {k} of {n}")
+
     items = [
         ("Changed the file with the wrong tool", "These runs are left out of every table.",
          both(lambda r: not r["valid"], valid_only=False)),
@@ -266,6 +285,8 @@ def behavior(rows):
          both(lambda r: not r["code_ok"])),
         ("Right code, wrong blank lines", "Most often two extra blank lines at the end of the file, after "
          "moving a class there.", both(lambda r: r["code_ok"] and not r["pass"])),
+        ("Threw neovain's output away", "On the large task: sent it to /dev/null, filtered it, or kept only a "
+         "few lines. 0.1.0 printed a 2,000-line diff there; 0.2.0 prints a summary.", thrown),
         ("Wrote a script to work out its patch", "Within the rules: the agent still applied the patch with its "
          "own tool. It helps explain the low token counts.",
          both(lambda r: r.get("scripted_patch", False))[::2]),
@@ -287,15 +308,15 @@ def md_table(headers, rows):
     return lines + ["| " + " | ".join(r) + " |" for r in rows]
 
 
-def md_cells(cells, claude, guidance=False):
-    headers = ["Model", "Tool"] + (["Guidance"] if guidance else []) + ["Exact", "Code correct", "Output tokens"]
+def md_cells(cells, claude, versions=False):
+    headers = ["Model", "Tool"] + (["neovain"] if versions else []) + ["Exact", "Code correct", "Output tokens"]
     headers += ["API requests", "Tool calls", "Wall time", "Cost"] if claude else ["Tool calls", "Wall time"]
     rows = []
     for s in cells:
-        tool = ("Edit tool" if s["agent"] == "claude" else "Patch tool") if s["arm"] == "edit" else "neovain"
-        lead = [short(s["model_name"]), tool] + ([s["guidance"] or ""] if guidance else [])
+        lead = [short(s["model_name"]), tool_label(s)] + ([s["version"] or ""] if versions else [])
         if not s["n"]:
-            rows.append(lead + [f"left out: all {s['excluded']} runs broke the rules"] + [""] * (len(headers) - len(lead) - 1))
+            rows.append(lead + [f"left out: all {s['excluded']} runs broke the rules"]
+                        + [""] * (len(headers) - len(lead) - 1))
             continue
         row = lead + [f"{s['exact']}/{s['n']}", f"{s['code_ok']}/{s['n']}", f_int(s["out_tok"])]
         if claude:
@@ -305,14 +326,6 @@ def md_cells(cells, claude, guidance=False):
             row.append(f_usd(s["cost_usd"]))
         rows.append(row)
     return md_table(headers, rows)
-
-
-def guidance_cells(rows, task):
-    """Claude's neovain arm under each version of the guidance. v1 ran with the effort left to the CLI."""
-    picks = [("v1", "claude-r1-large" if task == "large" else "claude-r1-small"),
-             ("v2", "claude-medium-v2"), ("v3", "claude-medium")]
-    return [cell(rows, batch=batch, task=task, model=m, arm="neovain", ctx_kb=0)
-            for m in CLAUDE for _, batch in picks]
 
 
 def behavior_md(rows):
@@ -325,8 +338,31 @@ def behavior_md(rows):
         out.append([name, tool, str(len(mine)), str(len(mine) - len(ok)), str(sum(not r["code_ok"] for r in ok)),
                     str(sum(r["code_ok"] and not r["pass"] for r in ok)),
                     str(sum(r.get("scripted_patch", False) for r in ok)) if arm == "edit" else ""])
-    return md_table(["Agent", "Tool", "Runs", "Wrong tool (left out)", "Wrong code", "Right code, wrong blank lines",
-                     "Scripted its patch"], out)
+    lines = md_table(["Agent", "Tool", "Runs", "Wrong tool (left out)", "Wrong code",
+                      "Right code, wrong blank lines", "Scripted its patch"], out)
+    thrown = []
+    for agent, name in (("claude", "Claude"), ("codex", "Codex")):
+        for ver in ("0.1.0", "0.2.0"):
+            k, n = discarded(rows, agent, ver)
+            thrown.append([name, ver, str(n), str(k)])
+    return lines + ["", "Runs on the large task that threw neovain's output away:", ""] + md_table(
+        ["Agent", "neovain", "Runs", "Threw the output away"], thrown)
+
+
+def totals_md(rows, models, task, versions):
+    """One row per tool and version, over every model: what a change of version did overall."""
+    out = []
+    for arm, ver in [("edit", None)] + [("neovain", v) for v in versions]:
+        mine = [r for r in rows if r["model"] in models and r["task"] == task and r["arm"] == arm
+                and r.get("ctx_kb", 0) == 0 and version(r) == ver]
+        ok = [r for r in mine if r["valid"]]
+        out.append(["Patch tool" if arm == "edit" else f"neovain {ver}", str(len(ok)), str(len(mine) - len(ok)),
+                    str(sum(r["pass"] for r in ok)), str(sum(r["code_ok"] for r in ok)),
+                    str(sum(r["code_ok"] and not r["pass"] for r in ok)), str(sum(not r["code_ok"] for r in ok)),
+                    f_int(statistics.mean(r["out_tok"] for r in ok)),
+                    f_seconds(statistics.mean(r["wall_s"] for r in ok))])
+    return md_table(["Tool", "Runs", "Left out", "Exact", "Code correct", "Right code, wrong blank lines",
+                     "Wrong code", "Output tokens", "Wall time"], out)
 
 
 # ---- splice ----
@@ -353,7 +389,7 @@ def splice(regions, path):
             fragment.write_text(text, encoding="utf-8", newline="\n")
             steps += [f"@<!-- generated:{name} -->", f":.,/<!-- \\/generated:{name} -->/d",
                       ":-1r " + fragment.as_posix().replace(" ", "\\ ")]
-        done = subprocess.run(["neovain", str(path), *steps], capture_output=True, text=True)
+        done = subprocess.run(["neovain", "--diff", "summary", str(path), *steps], capture_output=True, text=True)
         if done.returncode != 0:
             raise SystemExit(f"export_site: neovain failed on {path.name}\n{done.stderr}")
 
@@ -362,9 +398,10 @@ def main():
     rows = [json.loads(line) for line in (BENCH / "results.jsonl").read_text().splitlines() if line.strip()]
     demo = json.loads((BENCH / "demo-large.json").read_text())
 
-    claude = [r for r in rows if r["batch"] == "claude-medium"]
-    large = {m: {a: cell(claude, task="large", model=m, arm=a) for a in ("edit", "neovain")} for m in CLAUDE}
-    small = [cell(claude, task="small", model=m, arm=a) for m in CLAUDE for a in ("edit", "neovain")]
+    shown = [r for r in rows if r["batch"] in SHOWN]
+    large_cells = cells_for(shown, CLAUDE, "large", [CURRENT])
+    small = cells_for(shown, CLAUDE, "small", [CURRENT])
+    large = {m: {s["arm"]: s for s in large_cells if s["model"] == m} for m in CLAUDE}
 
     def ratio(metric):
         return statistics.mean(large[m]["edit"][metric] / large[m]["neovain"][metric] for m in CLAUDE)
@@ -379,26 +416,24 @@ def main():
                                                "wall time", f_seconds, large)]
               + ["  " + line for line in chart("Cost", "per task at API list price", "cost_usd", "cost", f_usd, large)]
               + ["</div>"])
-    large_cells = [large[m][a] for m in CLAUDE for a in ("edit", "neovain")]
-    done = {b: sum(r["batch"] == b for r in rows) for b in CODEX_BATCHES}
-    complete = [b for b, (expected, _) in CODEX_BATCHES.items() if done[b] >= expected]
-    pending = [f"{label} ({done[b]} of {expected} runs done)"
-               for b, (expected, label) in CODEX_BATCHES.items() if done[b] < expected]
-    codex_large, codex_small = codex_cells(rows, "large", complete), codex_cells(rows, "small", complete)
-    status = ""
-    if pending:
-        status = ('<p class="note"><strong>Still running:</strong> ' + esc("; ".join(pending))
-                  + ". Those rows are added when the batch is complete.</p>")
+    codex_large = cells_for(shown, CODEX, "large", [CURRENT])
+    codex_small = cells_for(shown, CODEX, "small", [CURRENT])
 
     regions = {
         "demo": region("demo", demo_fragment(demo, headline)),
         "large": region("large", charts + table(large_cells, True)),
         "small": region("small", table(small, True)),
         "codex": region("codex", ['<h4 class="table-title">Large structural edits</h4>'] + table(codex_large, False)
-                        + ['<h4 class="table-title">Small edits</h4>'] + table(codex_small, False)
-                        + ([status] if status else [])),
+                        + ['<h4 class="table-title">Small edits</h4>'] + table(codex_small, False)),
         "behavior": region("behavior", behavior(rows)),
     }
+
+    history = [r for r in rows if r["batch"] in HISTORY]
+    claude_versions = ["0.1.0, guidance v1", "0.1.0, guidance v2", "0.1.0, guidance v3", "0.2.0"]
+    codex_versions = ["0.1.0, guidance v2", "0.1.0, guidance v3", "0.2.0"]
+
+    def neovain_only(cells):
+        return [s for s in cells if s["arm"] == "neovain"]
 
     summary_line = (f"{len(rows)} runs in {len({r['batch'] for r in rows})} batches. "
                     f"{sum(not r['valid'] for r in rows)} runs broke the rules and are left out of the tables.")
@@ -410,18 +445,23 @@ def main():
                             f"took {f_ratio(headline['time_ratio'])} less time and cost "
                             f"{f_ratio(headline['cost_ratio'])} less (means of the two models' ratios)."], 0),
         "guidance": region("guidance", ["**Large structural edits**", ""]
-                           + md_cells(guidance_cells(rows, "large"), True, guidance=True)
+                           + md_cells(neovain_only(cells_for(history, CLAUDE, "large", claude_versions)), True, True)
                            + ["", "**Small edits**", ""]
-                           + md_cells(guidance_cells(rows, "small"), True, guidance=True), 0),
-        "codex": region("codex", ["**Large structural edits**", ""] + md_cells(codex_large, False, guidance=True)
-                        + ["", "**Small edits**", ""] + md_cells(codex_small, False, guidance=True)
-                        + (["", "Still running: " + "; ".join(pending) + ". Those rows are added when the "
-                            "batch is complete."] if pending else []), 0),
+                           + md_cells(neovain_only(cells_for(history, CLAUDE, "small", claude_versions)), True, True),
+                           0),
+        "codex": region("codex", ["**Large structural edits**", ""]
+                        + md_cells(cells_for(history, CODEX, "large", codex_versions), False, True)
+                        + ["", "**Small edits**", ""]
+                        + md_cells(cells_for(history, CODEX, "small", codex_versions), False, True)
+                        + ["", "**All seven models together, large structural edits**", ""]
+                        + totals_md(history, CODEX, "large", codex_versions)
+                        + ["", "**All seven models together, small edits**", ""]
+                        + totals_md(history, CODEX, "small", codex_versions), 0),
         "behavior": region("behavior", behavior_md(rows), 0),
     }
     readme_path = BENCH / "README.md"
 
-    data = {"headline": headline, "claude_large": large_cells, "claude_small": small,
+    data = {"headline": headline, "neovain": CURRENT, "claude_large": large_cells, "claude_small": small,
             "codex_large": codex_large, "codex_small": codex_small, "demo": demo,
             "runs": len(rows), "runs_left_out": sum(not r["valid"] for r in rows)}
     data_text = json.dumps(data, indent=1) + "\n"

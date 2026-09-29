@@ -45,6 +45,8 @@ def main():
             continue
         rows = [json.loads(line) for line in results.read_text().splitlines() if line.strip()]
         for row in rows:
+            if b.get("tasks") and row.get("task", "small") not in b["tasks"]:
+                continue
             if row.get("api_error"):
                 skipped.append(f"{b['batch']}: {row['model']} {row['arm']} #{row['rep']} hit an API error")
                 continue
@@ -62,6 +64,7 @@ def main():
                 "batch": b["batch"], "agent": agent, "model": row["model"], "model_name": MODEL_NAMES[row["model"]],
                 "effort": row["effort"] if explicit else DEFAULT_EFFORT[row["model"]], "effort_set": explicit,
                 "guidance": None if arm == "edit" else b["guidance"],
+                "tool": None if arm == "edit" else b.get("tool", "0.1.0"),
                 "task": row.get("task", "small"), "arm": arm, "ctx_kb": row.get("ctx_kb", 0), "rep": row["rep"],
                 "pass": row["pass"], "code_ok": run.code_ok(row["pass"], row["check"]), "check": row["check"],
                 "violations": violations, "valid": not violations, "scripted_patch": scripted,

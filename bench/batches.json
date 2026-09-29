@@ -20,5 +20,17 @@
   {"batch": "codex-5.6-medium", "dir": "~/neovain-bench/codex-56-medium", "agent": "codex", "guidance": "v2",
    "note": "GPT-5.6, both tools, effort set to medium. neovain reads guidance v2."},
   {"batch": "codex-medium-v3", "dir": "~/neovain-bench/codex-v3", "agent": "codex", "guidance": "v3",
-   "note": "All seven Codex models, neovain arm, effort set to medium, guidance v3."}
+   "note": "All seven Codex models, neovain arm, effort set to medium, guidance v3."},
+  {"batch": "claude-0.2.0-small", "dir": "~/neovain-bench/claude-v020", "agent": "claude", "guidance": "v4",
+   "tool": "0.2.0", "tasks": ["small"],
+   "note": "neovain 0.2.0, effort medium. Small task only: this batch's large-task runs read a README whose worked example was the large task itself, so they are left out."},
+  {"batch": "claude-0.2.0-large", "dir": "~/neovain-bench/claude-v020-clean", "agent": "claude", "guidance": "v4",
+   "tool": "0.2.0",
+   "note": "neovain 0.2.0, effort medium, large task, after the README's example was replaced."},
+  {"batch": "codex-0.2.0-small", "dir": "~/neovain-bench/codex-v020", "agent": "codex", "guidance": "v4",
+   "tool": "0.2.0", "tasks": ["small"],
+   "note": "neovain 0.2.0, effort medium. Small task only, for the same reason as claude-0.2.0-small."},
+  {"batch": "codex-0.2.0-large", "dir": "~/neovain-bench/codex-v020-clean", "agent": "codex", "guidance": "v4",
+   "tool": "0.2.0",
+   "note": "neovain 0.2.0, effort medium, large task, after the README's example was replaced."}
 ]

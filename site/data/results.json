@@ -1,10 +1,11 @@
 {
  "headline": {
-  "out_ratio": 11.98681018814385,
-  "time_ratio": 6.000765022882986,
-  "cost_ratio": 4.300967341529789,
+  "out_ratio": 13.754390211441363,
+  "time_ratio": 6.747752730627357,
+  "cost_ratio": 4.530874450832421,
   "basis": "Mean of Claude Opus 5.5 and Sonnet 5.5, 3 runs each"
  },
+ "neovain": "0.2.0",
  "claude_large": [
   {
    "n": 3,
@@ -22,25 +23,27 @@
    "model_name": "Claude Opus 5.5",
    "arm": "edit",
    "agent": "claude",
-   "guidance": null
+   "guidance": null,
+   "version": null
   },
   {
    "n": 3,
    "excluded": 0,
-   "out_tok": 2679.6666666666665,
-   "think_tok": 915,
-   "tool_calls": 9.666666666666666,
-   "edit_calls": 3.3333333333333335,
-   "wall_s": 37.3,
-   "cost_usd": 0.32835333333333333,
-   "api_requests": 10.333333333333334,
+   "out_tok": 1888.6666666666667,
+   "think_tok": 889.3333333333334,
+   "tool_calls": 6,
+   "edit_calls": 1.6666666666666667,
+   "wall_s": 28.7,
+   "cost_usd": 0.28947006666666664,
+   "api_requests": 7,
    "exact": 3,
    "code_ok": 3,
    "model": "opus",
    "model_name": "Claude Opus 5.5",
    "arm": "neovain",
    "agent": "claude",
-   "guidance": "v3"
+   "guidance": "v4",
+   "version": "0.2.0"
   },
   {
    "n": 3,
@@ -58,25 +61,27 @@
    "model_name": "Claude Sonnet 5.5",
    "arm": "edit",
    "agent": "claude",
-   "guidance": null
+   "guidance": null,
+   "version": null
   },
   {
    "n": 3,
    "excluded": 0,
-   "out_tok": 2371,
-   "think_tok": 971,
-   "tool_calls": 9,
-   "edit_calls": 2.6666666666666665,
-   "wall_s": 26.4,
-   "cost_usd": 0.17205446666666668,
-   "api_requests": 9,
+   "out_tok": 2689.3333333333335,
+   "think_tok": 1316,
+   "tool_calls": 7.666666666666667,
+   "edit_calls": 2,
+   "wall_s": 28.033333333333335,
+   "cost_usd": 0.1771822,
+   "api_requests": 7,
    "exact": 3,
    "code_ok": 3,
    "model": "sonnet",
    "model_name": "Claude Sonnet 5.5",
    "arm": "neovain",
    "agent": "claude",
-   "guidance": "v3"
+   "guidance": "v4",
+   "version": "0.2.0"
   }
  ],
  "claude_small": [
@@ -96,25 +101,27 @@
    "model_name": "Claude Opus 5.5",
    "arm": "edit",
    "agent": "claude",
-   "guidance": null
+   "guidance": null,
+   "version": null
   },
   {
    "n": 3,
    "excluded": 0,
-   "out_tok": 990.6666666666666,
-   "think_tok": 512.6666666666666,
-   "tool_calls": 2,
-   "edit_calls": 1,
-   "wall_s": 13.633333333333333,
-   "cost_usd": 0.18825873333333334,
-   "api_requests": 3,
+   "out_tok": 1074.6666666666667,
+   "think_tok": 531,
+   "tool_calls": 2.3333333333333335,
+   "edit_calls": 1.3333333333333333,
+   "wall_s": 14.700000000000001,
+   "cost_usd": 0.21166800000000002,
+   "api_requests": 3.3333333333333335,
    "exact": 3,
    "code_ok": 3,
    "model": "opus",
    "model_name": "Claude Opus 5.5",
    "arm": "neovain",
    "agent": "claude",
-   "guidance": "v3"
+   "guidance": "v4",
+   "version": "0.2.0"
   },
   {
    "n": 3,
@@ -132,17 +139,18 @@
    "model_name": "Claude Sonnet 5.5",
    "arm": "edit",
    "agent": "claude",
-   "guidance": null
+   "guidance": null,
+   "version": null
   },
   {
    "n": 3,
    "excluded": 0,
-   "out_tok": 1717,
-   "think_tok": 1025.3333333333333,
-   "tool_calls": 4.333333333333333,
-   "edit_calls": 1.3333333333333333,
-   "wall_s": 19.133333333333333,
-   "cost_usd": 0.11357793333333334,
+   "out_tok": 1457,
+   "think_tok": 885,
+   "tool_calls": 4,
+   "edit_calls": 1,
+   "wall_s": 16.033333333333335,
+   "cost_usd": 0.11896079999999999,
    "api_requests": 3.6666666666666665,
    "exact": 3,
    "code_ok": 3,
@@ -150,7 +158,8 @@
    "model_name": "Claude Sonnet 5.5",
    "arm": "neovain",
    "agent": "claude",
-   "guidance": "v3"
+   "guidance": "v4",
+   "version": "0.2.0"
   }
  ],
  "codex_large": [
@@ -170,34 +179,17 @@
    "model_name": "GPT-6 Astra",
    "arm": "edit",
    "agent": "codex",
-   "guidance": null
+   "guidance": null,
+   "version": null
   },
   {
    "n": 3,
    "excluded": 0,
-   "out_tok": 1072.6666666666667,
-   "think_tok": 199.66666666666666,
-   "tool_calls": 10.666666666666666,
-   "edit_calls": 3,
-   "wall_s": 51.9,
-   "cost_usd": null,
-   "api_requests": null,
-   "exact": 3,
-   "code_ok": 3,
-   "model": "gpt-6-astra",
-   "model_name": "GPT-6 Astra",
-   "arm": "neovain",
-   "agent": "codex",
-   "guidance": "v2"
-  },
-  {
-   "n": 3,
-   "excluded": 0,
-   "out_tok": 772.3333333333334,
-   "think_tok": 78.33333333333333,
-   "tool_calls": 10,
+   "out_tok": 671,
+   "think_tok": 42.333333333333336,
+   "tool_calls": 9.666666666666666,
    "edit_calls": 2,
-   "wall_s": 55.833333333333336,
+   "wall_s": 36.833333333333336,
    "cost_usd": null,
    "api_requests": null,
    "exact": 3,
@@ -206,7 +198,8 @@
    "model_name": "GPT-6 Astra",
    "arm": "neovain",
    "agent": "codex",
-   "guidance": "v3"
+   "guidance": "v4",
+   "version": "0.2.0"
   },
   {
    "n": 3,
@@ -224,34 +217,17 @@
    "model_name": "GPT-6 Sol",
    "arm": "edit",
    "agent": "codex",
-   "guidance": null
+   "guidance": null,
+   "version": null
   },
   {
    "n": 3,
    "excluded": 0,
-   "out_tok": 3944.6666666666665,
-   "think_tok": 2184.3333333333335,
-   "tool_calls": 22.333333333333332,
-   "edit_calls": 4.333333333333333,
-   "wall_s": 110.39999999999999,
-   "cost_usd": null,
-   "api_requests": null,
-   "exact": 3,
-   "code_ok": 3,
-   "model": "gpt-6-sol",
-   "model_name": "GPT-6 Sol",
-   "arm": "neovain",
-   "agent": "codex",
-   "guidance": "v2"
-  },
-  {
-   "n": 3,
-   "excluded": 0,
-   "out_tok": 3814,
-   "think_tok": 2040,
-   "tool_calls": 19.666666666666668,
-   "edit_calls": 4,
-   "wall_s": 144.03333333333333,
+   "out_tok": 2352.3333333333335,
+   "think_tok": 1065,
+   "tool_calls": 16.333333333333332,
+   "edit_calls": 2,
+   "wall_s": 61.96666666666667,
    "cost_usd": null,
    "api_requests": null,
    "exact": 2,
@@ -260,7 +236,8 @@
    "model_name": "GPT-6 Sol",
    "arm": "neovain",
    "agent": "codex",
-   "guidance": "v3"
+   "guidance": "v4",
+   "version": "0.2.0"
   },
   {
    "n": 3,
@@ -278,43 +255,27 @@
    "model_name": "GPT-6 Luna",
    "arm": "edit",
    "agent": "codex",
-   "guidance": null
+   "guidance": null,
+   "version": null
   },
   {
    "n": 3,
    "excluded": 0,
-   "out_tok": 4452.333333333333,
-   "think_tok": 2730,
-   "tool_calls": 15,
-   "edit_calls": 5.666666666666667,
-   "wall_s": 148.3,
+   "out_tok": 3966.6666666666665,
+   "think_tok": 2387.6666666666665,
+   "tool_calls": 12.333333333333334,
+   "edit_calls": 5,
+   "wall_s": 107.96666666666667,
    "cost_usd": null,
    "api_requests": null,
-   "exact": 0,
-   "code_ok": 2,
+   "exact": 1,
+   "code_ok": 1,
    "model": "gpt-6-luna",
    "model_name": "GPT-6 Luna",
    "arm": "neovain",
    "agent": "codex",
-   "guidance": "v2"
-  },
-  {
-   "n": 3,
-   "excluded": 0,
-   "out_tok": 4288.333333333333,
-   "think_tok": 3008,
-   "tool_calls": 12,
-   "edit_calls": 4,
-   "wall_s": 121.26666666666667,
-   "cost_usd": null,
-   "api_requests": null,
-   "exact": 0,
-   "code_ok": 0,
-   "model": "gpt-6-luna",
-   "model_name": "GPT-6 Luna",
-   "arm": "neovain",
-   "agent": "codex",
-   "guidance": "v3"
+   "guidance": "v4",
+   "version": "0.2.0"
   },
   {
    "n": 3,
@@ -332,16 +293,17 @@
    "model_name": "GPT-5.6 Sol",
    "arm": "edit",
    "agent": "codex",
-   "guidance": null
+   "guidance": null,
+   "version": null
   },
   {
    "n": 3,
    "excluded": 0,
-   "out_tok": 4199.333333333333,
-   "think_tok": 2362.3333333333335,
-   "tool_calls": 11.333333333333334,
-   "edit_calls": 3.3333333333333335,
-   "wall_s": 100.53333333333333,
+   "out_tok": 2726.3333333333335,
+   "think_tok": 1206.6666666666667,
+   "tool_calls": 8.666666666666666,
+   "edit_calls": 2.3333333333333335,
+   "wall_s": 68.13333333333333,
    "cost_usd": null,
    "api_requests": null,
    "exact": 3,
@@ -350,25 +312,8 @@
    "model_name": "GPT-5.6 Sol",
    "arm": "neovain",
    "agent": "codex",
-   "guidance": "v2"
-  },
-  {
-   "n": 3,
-   "excluded": 0,
-   "out_tok": 2832.6666666666665,
-   "think_tok": 1396,
-   "tool_calls": 9,
-   "edit_calls": 2,
-   "wall_s": 76.73333333333333,
-   "cost_usd": null,
-   "api_requests": null,
-   "exact": 3,
-   "code_ok": 3,
-   "model": "gpt-5.6-sol",
-   "model_name": "GPT-5.6 Sol",
-   "arm": "neovain",
-   "agent": "codex",
-   "guidance": "v3"
+   "guidance": "v4",
+   "version": "0.2.0"
   },
   {
    "n": 3,
@@ -386,43 +331,27 @@
    "model_name": "GPT-5.6 Terra",
    "arm": "edit",
    "agent": "codex",
-   "guidance": null
+   "guidance": null,
+   "version": null
   },
   {
    "n": 3,
    "excluded": 0,
-   "out_tok": 7234,
-   "think_tok": 4686.333333333333,
-   "tool_calls": 17,
-   "edit_calls": 10.333333333333334,
-   "wall_s": 150.26666666666665,
+   "out_tok": 3479,
+   "think_tok": 2344,
+   "tool_calls": 7.333333333333333,
+   "edit_calls": 2,
+   "wall_s": 74.2,
    "cost_usd": null,
    "api_requests": null,
    "exact": 1,
-   "code_ok": 2,
+   "code_ok": 1,
    "model": "gpt-5.6-terra",
    "model_name": "GPT-5.6 Terra",
    "arm": "neovain",
    "agent": "codex",
-   "guidance": "v2"
-  },
-  {
-   "n": 3,
-   "excluded": 0,
-   "out_tok": 4894,
-   "think_tok": 3282.3333333333335,
-   "tool_calls": 10,
-   "edit_calls": 3,
-   "wall_s": 107.26666666666667,
-   "cost_usd": null,
-   "api_requests": null,
-   "exact": 2,
-   "code_ok": 3,
-   "model": "gpt-5.6-terra",
-   "model_name": "GPT-5.6 Terra",
-   "arm": "neovain",
-   "agent": "codex",
-   "guidance": "v3"
+   "guidance": "v4",
+   "version": "0.2.0"
   },
   {
    "n": 3,
@@ -440,43 +369,27 @@
    "model_name": "GPT-5.6 Luna",
    "arm": "edit",
    "agent": "codex",
-   "guidance": null
+   "guidance": null,
+   "version": null
   },
   {
    "n": 3,
    "excluded": 0,
-   "out_tok": 8355.333333333334,
-   "think_tok": 5022,
-   "tool_calls": 21,
-   "edit_calls": 9.333333333333334,
-   "wall_s": 179.93333333333334,
+   "out_tok": 4379.666666666667,
+   "think_tok": 2659,
+   "tool_calls": 9.666666666666666,
+   "edit_calls": 4,
+   "wall_s": 94.3,
    "cost_usd": null,
    "api_requests": null,
-   "exact": 1,
-   "code_ok": 2,
+   "exact": 3,
+   "code_ok": 3,
    "model": "gpt-5.6-luna",
    "model_name": "GPT-5.6 Luna",
    "arm": "neovain",
    "agent": "codex",
-   "guidance": "v2"
-  },
-  {
-   "n": 3,
-   "excluded": 0,
-   "out_tok": 7382.666666666667,
-   "think_tok": 4701,
-   "tool_calls": 16.666666666666668,
-   "edit_calls": 5.666666666666667,
-   "wall_s": 167.66666666666666,
-   "cost_usd": null,
-   "api_requests": null,
-   "exact": 1,
-   "code_ok": 2,
-   "model": "gpt-5.6-luna",
-   "model_name": "GPT-5.6 Luna",
-   "arm": "neovain",
-   "agent": "codex",
-   "guidance": "v3"
+   "guidance": "v4",
+   "version": "0.2.0"
   },
   {
    "n": 0,
@@ -485,34 +398,17 @@
    "model_name": "GPT-5.5",
    "arm": "edit",
    "agent": "codex",
-   "guidance": null
+   "guidance": null,
+   "version": null
   },
   {
    "n": 3,
    "excluded": 0,
-   "out_tok": 5815.333333333333,
-   "think_tok": 2755.3333333333335,
-   "tool_calls": 25.666666666666668,
-   "edit_calls": 4,
-   "wall_s": 125.7,
-   "cost_usd": null,
-   "api_requests": null,
-   "exact": 1,
-   "code_ok": 3,
-   "model": "gpt-5.5",
-   "model_name": "GPT-5.5",
-   "arm": "neovain",
-   "agent": "codex",
-   "guidance": "v2"
-  },
-  {
-   "n": 3,
-   "excluded": 0,
-   "out_tok": 4552.333333333333,
-   "think_tok": 2284.6666666666665,
-   "tool_calls": 18.666666666666668,
-   "edit_calls": 3.3333333333333335,
-   "wall_s": 95.36666666666666,
+   "out_tok": 3763.6666666666665,
+   "think_tok": 1422,
+   "tool_calls": 19.666666666666668,
+   "edit_calls": 2.6666666666666665,
+   "wall_s": 83.06666666666666,
    "cost_usd": null,
    "api_requests": null,
    "exact": 3,
@@ -521,7 +417,8 @@
    "model_name": "GPT-5.5",
    "arm": "neovain",
    "agent": "codex",
-   "guidance": "v3"
+   "guidance": "v4",
+   "version": "0.2.0"
   }
  ],
  "codex_small": [
@@ -541,16 +438,17 @@
    "model_name": "GPT-6 Astra",
    "arm": "edit",
    "agent": "codex",
-   "guidance": null
+   "guidance": null,
+   "version": null
   },
   {
    "n": 3,
    "excluded": 0,
-   "out_tok": 798,
-   "think_tok": 34.666666666666664,
-   "tool_calls": 7.333333333333333,
-   "edit_calls": 3,
-   "wall_s": 37.9,
+   "out_tok": 715.6666666666666,
+   "think_tok": 7,
+   "tool_calls": 6.666666666666667,
+   "edit_calls": 2.6666666666666665,
+   "wall_s": 34.56666666666666,
    "cost_usd": null,
    "api_requests": null,
    "exact": 3,
@@ -559,25 +457,8 @@
    "model_name": "GPT-6 Astra",
    "arm": "neovain",
    "agent": "codex",
-   "guidance": "v2"
-  },
-  {
-   "n": 3,
-   "excluded": 0,
-   "out_tok": 462.3333333333333,
-   "think_tok": 3.3333333333333335,
-   "tool_calls": 6,
-   "edit_calls": 2,
-   "wall_s": 39.06666666666666,
-   "cost_usd": null,
-   "api_requests": null,
-   "exact": 3,
-   "code_ok": 3,
-   "model": "gpt-6-astra",
-   "model_name": "GPT-6 Astra",
-   "arm": "neovain",
-   "agent": "codex",
-   "guidance": "v3"
+   "guidance": "v4",
+   "version": "0.2.0"
   },
   {
    "n": 3,
@@ -595,16 +476,17 @@
    "model_name": "GPT-6 Sol",
    "arm": "edit",
    "agent": "codex",
-   "guidance": null
+   "guidance": null,
+   "version": null
   },
   {
    "n": 3,
    "excluded": 0,
-   "out_tok": 2100.6666666666665,
-   "think_tok": 1208.3333333333333,
-   "tool_calls": 7.333333333333333,
-   "edit_calls": 2.6666666666666665,
-   "wall_s": 56.833333333333336,
+   "out_tok": 1819.6666666666667,
+   "think_tok": 1043,
+   "tool_calls": 6.666666666666667,
+   "edit_calls": 2,
+   "wall_s": 43.0,
    "cost_usd": null,
    "api_requests": null,
    "exact": 3,
@@ -613,25 +495,8 @@
    "model_name": "GPT-6 Sol",
    "arm": "neovain",
    "agent": "codex",
-   "guidance": "v2"
-  },
-  {
-   "n": 3,
-   "excluded": 0,
-   "out_tok": 2077,
-   "think_tok": 1103.6666666666667,
-   "tool_calls": 7.666666666666667,
-   "edit_calls": 3,
-   "wall_s": 67.13333333333333,
-   "cost_usd": null,
-   "api_requests": null,
-   "exact": 3,
-   "code_ok": 3,
-   "model": "gpt-6-sol",
-   "model_name": "GPT-6 Sol",
-   "arm": "neovain",
-   "agent": "codex",
-   "guidance": "v3"
+   "guidance": "v4",
+   "version": "0.2.0"
   },
   {
    "n": 3,
@@ -649,34 +514,17 @@
    "model_name": "GPT-6 Luna",
    "arm": "edit",
    "agent": "codex",
-   "guidance": null
+   "guidance": null,
+   "version": null
   },
   {
    "n": 3,
    "excluded": 0,
-   "out_tok": 2120,
-   "think_tok": 841.3333333333334,
-   "tool_calls": 5.333333333333333,
-   "edit_calls": 3.3333333333333335,
-   "wall_s": 46.199999999999996,
-   "cost_usd": null,
-   "api_requests": null,
-   "exact": 2,
-   "code_ok": 3,
-   "model": "gpt-6-luna",
-   "model_name": "GPT-6 Luna",
-   "arm": "neovain",
-   "agent": "codex",
-   "guidance": "v2"
-  },
-  {
-   "n": 3,
-   "excluded": 0,
-   "out_tok": 2789,
-   "think_tok": 1400.3333333333333,
-   "tool_calls": 7.666666666666667,
-   "edit_calls": 5.333333333333333,
-   "wall_s": 77.6,
+   "out_tok": 2614,
+   "think_tok": 1690,
+   "tool_calls": 9,
+   "edit_calls": 4.666666666666667,
+   "wall_s": 66.43333333333334,
    "cost_usd": null,
    "api_requests": null,
    "exact": 2,
@@ -685,7 +533,8 @@
    "model_name": "GPT-6 Luna",
    "arm": "neovain",
    "agent": "codex",
-   "guidance": "v3"
+   "guidance": "v4",
+   "version": "0.2.0"
   },
   {
    "n": 3,
@@ -703,16 +552,17 @@
    "model_name": "GPT-5.6 Sol",
    "arm": "edit",
    "agent": "codex",
-   "guidance": null
+   "guidance": null,
+   "version": null
   },
   {
    "n": 3,
    "excluded": 0,
-   "out_tok": 2179.6666666666665,
-   "think_tok": 1148.6666666666667,
+   "out_tok": 2081,
+   "think_tok": 999,
    "tool_calls": 4.333333333333333,
-   "edit_calls": 2.3333333333333335,
-   "wall_s": 50.06666666666667,
+   "edit_calls": 3,
+   "wall_s": 50.56666666666666,
    "cost_usd": null,
    "api_requests": null,
    "exact": 3,
@@ -721,25 +571,8 @@
    "model_name": "GPT-5.6 Sol",
    "arm": "neovain",
    "agent": "codex",
-   "guidance": "v2"
-  },
-  {
-   "n": 3,
-   "excluded": 0,
-   "out_tok": 2115.6666666666665,
-   "think_tok": 1236.6666666666667,
-   "tool_calls": 4,
-   "edit_calls": 2,
-   "wall_s": 62.666666666666664,
-   "cost_usd": null,
-   "api_requests": null,
-   "exact": 3,
-   "code_ok": 3,
-   "model": "gpt-5.6-sol",
-   "model_name": "GPT-5.6 Sol",
-   "arm": "neovain",
-   "agent": "codex",
-   "guidance": "v3"
+   "guidance": "v4",
+   "version": "0.2.0"
   },
   {
    "n": 3,
@@ -757,16 +590,17 @@
    "model_name": "GPT-5.6 Terra",
    "arm": "edit",
    "agent": "codex",
-   "guidance": null
+   "guidance": null,
+   "version": null
   },
   {
    "n": 3,
    "excluded": 0,
-   "out_tok": 3651,
-   "think_tok": 2190.6666666666665,
-   "tool_calls": 6,
-   "edit_calls": 3.6666666666666665,
-   "wall_s": 76.3,
+   "out_tok": 1989.3333333333333,
+   "think_tok": 1127.3333333333333,
+   "tool_calls": 4,
+   "edit_calls": 2.3333333333333335,
+   "wall_s": 49.4,
    "cost_usd": null,
    "api_requests": null,
    "exact": 3,
@@ -775,25 +609,8 @@
    "model_name": "GPT-5.6 Terra",
    "arm": "neovain",
    "agent": "codex",
-   "guidance": "v2"
-  },
-  {
-   "n": 3,
-   "excluded": 0,
-   "out_tok": 2175,
-   "think_tok": 1243.3333333333333,
-   "tool_calls": 4.333333333333333,
-   "edit_calls": 2.3333333333333335,
-   "wall_s": 48.4,
-   "cost_usd": null,
-   "api_requests": null,
-   "exact": 2,
-   "code_ok": 3,
-   "model": "gpt-5.6-terra",
-   "model_name": "GPT-5.6 Terra",
-   "arm": "neovain",
-   "agent": "codex",
-   "guidance": "v3"
+   "guidance": "v4",
+   "version": "0.2.0"
   },
   {
    "n": 3,
@@ -811,34 +628,17 @@
    "model_name": "GPT-5.6 Luna",
    "arm": "edit",
    "agent": "codex",
-   "guidance": null
+   "guidance": null,
+   "version": null
   },
   {
    "n": 3,
    "excluded": 0,
-   "out_tok": 7856,
-   "think_tok": 4473.666666666667,
-   "tool_calls": 14,
-   "edit_calls": 11.666666666666666,
-   "wall_s": 161.83333333333334,
-   "cost_usd": null,
-   "api_requests": null,
-   "exact": 2,
-   "code_ok": 3,
-   "model": "gpt-5.6-luna",
-   "model_name": "GPT-5.6 Luna",
-   "arm": "neovain",
-   "agent": "codex",
-   "guidance": "v2"
-  },
-  {
-   "n": 3,
-   "excluded": 0,
-   "out_tok": 6024.666666666667,
-   "think_tok": 4135.333333333333,
+   "out_tok": 4860.666666666667,
+   "think_tok": 3000,
    "tool_calls": 8,
    "edit_calls": 5.333333333333333,
-   "wall_s": 123.76666666666667,
+   "wall_s": 104.89999999999999,
    "cost_usd": null,
    "api_requests": null,
    "exact": 3,
@@ -847,7 +647,8 @@
    "model_name": "GPT-5.6 Luna",
    "arm": "neovain",
    "agent": "codex",
-   "guidance": "v3"
+   "guidance": "v4",
+   "version": "0.2.0"
   },
   {
    "n": 3,
@@ -865,16 +666,17 @@
    "model_name": "GPT-5.5",
    "arm": "edit",
    "agent": "codex",
-   "guidance": null
+   "guidance": null,
+   "version": null
   },
   {
    "n": 3,
    "excluded": 0,
-   "out_tok": 2572.3333333333335,
-   "think_tok": 1089,
-   "tool_calls": 8.333333333333334,
-   "edit_calls": 3,
-   "wall_s": 56.9,
+   "out_tok": 2843,
+   "think_tok": 1499,
+   "tool_calls": 7,
+   "edit_calls": 2.3333333333333335,
+   "wall_s": 60.43333333333334,
    "cost_usd": null,
    "api_requests": null,
    "exact": 3,
@@ -883,25 +685,8 @@
    "model_name": "GPT-5.5",
    "arm": "neovain",
    "agent": "codex",
-   "guidance": "v2"
-  },
-  {
-   "n": 3,
-   "excluded": 0,
-   "out_tok": 2610.3333333333335,
-   "think_tok": 908.6666666666666,
-   "tool_calls": 8.666666666666666,
-   "edit_calls": 3,
-   "wall_s": 57.233333333333334,
-   "cost_usd": null,
-   "api_requests": null,
-   "exact": 3,
-   "code_ok": 3,
-   "model": "gpt-5.5",
-   "model_name": "GPT-5.5",
-   "arm": "neovain",
-   "agent": "codex",
-   "guidance": "v3"
+   "guidance": "v4",
+   "version": "0.2.0"
   }
  ],
  "demo": {
@@ -957,6 +742,6 @@
    }
   ]
  },
- "runs": 288,
+ "runs": 342,
  "runs_left_out": 3
 }

@@ -4,7 +4,7 @@ Does editing through Vim commands (neovain) beat an agent's own editing tool? Th
 measures it with real, headless sessions in Claude Code and Codex CLI.
 
 <!-- generated:summary -->
-288 runs in 11 batches. 3 runs broke the rules and are left out of the tables.
+342 runs in 15 batches. 3 runs broke the rules and are left out of the tables.
 <!-- /generated:summary -->
 
 The tables in this file are generated from [`results.jsonl`](results.jsonl) by
@@ -52,19 +52,28 @@ medium for Opus 5.5 and Sonnet 5.5, according to its documentation. Codex differ
 GPT-5.6 Sol defaults to low, Terra and Luna to medium. Later batches set `--effort medium`, and
 every row records the level and whether it was set.
 
-**Guidance versions.** The neovain arm reads the "Using it well" section of the project README.
-That section changed twice during the benchmarks, each time after looking at failures:
+**neovain versions.** The neovain arm reads the "Using it well" section of the project README.
+The tool and that section changed during the benchmarks, each time after looking at failures:
 
-| Version | What it says |
+| Version | What changed |
 |---|---|
-| v1 | Anchor by content, prefer ex commands, read the diff. |
-| v2 | Adds: plan the whole change and send it as one call, take blank lines along when moving a block ("mind the seams"), preview with `--dry-run`, quote steps in single quotes. |
-| v3 | Replaces "mind the seams" with a method: a block owns the blank lines above it, so select both (`:-2,/^\S/-3`). Adds how to check and repair spacing. |
+| 0.1.0, guidance v1 | Anchor by content, prefer ex commands, read the diff. |
+| 0.1.0, guidance v2 | Adds: plan the whole change and send it as one call, take blank lines along when moving a block ("mind the seams"), preview with `--dry-run`, quote steps in single quotes. |
+| 0.1.0, guidance v3 | Replaces "mind the seams" with a method: a block owns the blank lines above it, so select both (`:-2,/^\S/-3`). Adds how to check and repair spacing. |
+| 0.2.0 | The tool itself changed. After a large change it prints a summary of at most 80 lines in place of the diff: the blocks moved, deleted, inserted and re-indented, and `WARNING` lines about spacing and about ranges that ran too far. The guidance says how to read it (`v4` in `results.jsonl`). |
 
-v3 was written after seeing that blank lines were the most common failure, so it targets what
-the checker punishes. It is general advice for any file with a spacing convention, but results
-under v3 should be read with that in mind. The edit arm gets no matching help: it never reads
-the README, and the layout rule is in the task description for both arms.
+Guidance v3 and the summary were written after seeing that blank lines were the most common
+failure, so they target what the checker punishes. Both are general help for any file with a
+spacing convention, but their results should be read with that in mind. The edit arm gets no
+matching help: it never reads the README, and the layout rule is in the task description for
+both arms.
+
+**A batch we threw away.** The first README for 0.2.0 explained the summary with a worked
+example, and the example was the large task: its commands and the line ranges to expect. Every
+run in the first 0.2.0 batch read it. Its large-task runs are left out (`tasks` in
+`batches.json`). The example now uses an unrelated file, and the large task ran again with that
+README. The small-task results are from the first batch, since the example gave nothing away
+about the small task.
 
 **Measures.** Token counts, cost and model time come from each CLI's own report. Output tokens
 include thinking. API requests counts distinct model responses, which is the number of round
@@ -87,7 +96,7 @@ stay on the machine that ran them.
 
 ### Claude Code, medium effort
 
-Claude Opus 5.5 and Sonnet 5.5, 3 runs per row, effort set to medium, guidance v3.
+Claude Opus 5.5 and Sonnet 5.5, 3 runs per row, effort set to medium, neovain 0.2.0.
 
 <!-- generated:claude -->
 **Large structural edits**
@@ -95,20 +104,20 @@ Claude Opus 5.5 and Sonnet 5.5, 3 runs per row, effort set to medium, guidance v
 | Model | Tool | Exact | Code correct | Output tokens | API requests | Tool calls | Wall time | Cost |
 |---|---|---|---|---|---|---|---|---|
 | Opus 5.5 | Edit tool | 3/3 | 3/3 | 31,790 | 19.7 | 24.7 | 229s | $1.43 |
-| Opus 5.5 | neovain | 3/3 | 3/3 | 2,680 | 10.3 | 9.7 | 37s | $0.33 |
+| Opus 5.5 | neovain | 3/3 | 3/3 | 1,889 | 7.0 | 6.0 | 29s | $0.29 |
 | Sonnet 5.5 | Edit tool | 3/3 | 3/3 | 28,713 | 17.7 | 23.3 | 155s | $0.73 |
-| Sonnet 5.5 | neovain | 3/3 | 3/3 | 2,371 | 9.0 | 9.0 | 26s | $0.17 |
+| Sonnet 5.5 | neovain | 3/3 | 3/3 | 2,689 | 7.0 | 7.7 | 28s | $0.18 |
 
 **Small edits**
 
 | Model | Tool | Exact | Code correct | Output tokens | API requests | Tool calls | Wall time | Cost |
 |---|---|---|---|---|---|---|---|---|
 | Opus 5.5 | Edit tool | 3/3 | 3/3 | 1,751 | 4.0 | 8.7 | 17s | $0.17 |
-| Opus 5.5 | neovain | 3/3 | 3/3 | 991 | 3.0 | 2.0 | 14s | $0.19 |
+| Opus 5.5 | neovain | 3/3 | 3/3 | 1,075 | 3.3 | 2.3 | 15s | $0.21 |
 | Sonnet 5.5 | Edit tool | 3/3 | 3/3 | 1,862 | 3.3 | 9.7 | 13s | $0.10 |
-| Sonnet 5.5 | neovain | 3/3 | 3/3 | 1,717 | 3.7 | 4.3 | 19s | $0.11 |
+| Sonnet 5.5 | neovain | 3/3 | 3/3 | 1,457 | 3.7 | 4.0 | 16s | $0.12 |
 
-On the large task neovain used 12.0× fewer output tokens, took 6.0× less time and cost 4.3× less (means of the two models' ratios).
+On the large task neovain used 13.8× fewer output tokens, took 6.7× less time and cost 4.5× less (means of the two models' ratios).
 <!-- /generated:claude -->
 
 On the small task the two tools are close. The Edit tool sends its 6 to 7 edits as parallel
@@ -117,98 +126,143 @@ short. On the large task, string replacement has to spell out every line it remo
 line it adds, so moving a 400-line class means writing it twice. neovain moves it with a range
 and `:m`.
 
-### Guidance versions
+### neovain versions
 
-Claude's neovain arm under each version of the guidance. v1 ran with the effort left to the
-CLI; v2 and v3 set it to medium.
+Claude's neovain arm under each version. Guidance v1 ran with the effort left to the CLI; the
+others set it to medium. Opus wrote less with each version. For Sonnet, 0.2.0 is no better
+than guidance v3 on the large task: at three runs per row the two cannot be told apart.
 
 <!-- generated:guidance -->
 **Large structural edits**
 
-| Model | Tool | Guidance | Exact | Code correct | Output tokens | API requests | Tool calls | Wall time | Cost |
+| Model | Tool | neovain | Exact | Code correct | Output tokens | API requests | Tool calls | Wall time | Cost |
 |---|---|---|---|---|---|---|---|---|---|
-| Opus 5.5 | neovain | v1 | 3/3 | 3/3 | 3,162 | 9.0 | 9.0 | 43s | $0.32 |
-| Opus 5.5 | neovain | v2 | 3/3 | 3/3 | 3,062 | 9.0 | 8.0 | 40s | $0.33 |
-| Opus 5.5 | neovain | v3 | 3/3 | 3/3 | 2,680 | 10.3 | 9.7 | 37s | $0.33 |
-| Sonnet 5.5 | neovain | v1 | 2/3 | 2/3 | 3,530 | 7.3 | 7.7 | 38s | $0.17 |
-| Sonnet 5.5 | neovain | v2 | 3/3 | 3/3 | 3,654 | 11.7 | 11.7 | 46s | $0.21 |
-| Sonnet 5.5 | neovain | v3 | 3/3 | 3/3 | 2,371 | 9.0 | 9.0 | 26s | $0.17 |
+| Opus 5.5 | neovain | 0.1.0, guidance v1 | 3/3 | 3/3 | 3,162 | 9.0 | 9.0 | 43s | $0.32 |
+| Opus 5.5 | neovain | 0.1.0, guidance v2 | 3/3 | 3/3 | 3,062 | 9.0 | 8.0 | 40s | $0.33 |
+| Opus 5.5 | neovain | 0.1.0, guidance v3 | 3/3 | 3/3 | 2,680 | 10.3 | 9.7 | 37s | $0.33 |
+| Opus 5.5 | neovain | 0.2.0 | 3/3 | 3/3 | 1,889 | 7.0 | 6.0 | 29s | $0.29 |
+| Sonnet 5.5 | neovain | 0.1.0, guidance v1 | 2/3 | 2/3 | 3,530 | 7.3 | 7.7 | 38s | $0.17 |
+| Sonnet 5.5 | neovain | 0.1.0, guidance v2 | 3/3 | 3/3 | 3,654 | 11.7 | 11.7 | 46s | $0.21 |
+| Sonnet 5.5 | neovain | 0.1.0, guidance v3 | 3/3 | 3/3 | 2,371 | 9.0 | 9.0 | 26s | $0.17 |
+| Sonnet 5.5 | neovain | 0.2.0 | 3/3 | 3/3 | 2,689 | 7.0 | 7.7 | 28s | $0.18 |
 
 **Small edits**
 
-| Model | Tool | Guidance | Exact | Code correct | Output tokens | API requests | Tool calls | Wall time | Cost |
+| Model | Tool | neovain | Exact | Code correct | Output tokens | API requests | Tool calls | Wall time | Cost |
 |---|---|---|---|---|---|---|---|---|---|
-| Opus 5.5 | neovain | v1 | 3/3 | 3/3 | 1,789 | 4.0 | 4.0 | 24s | $0.21 |
-| Opus 5.5 | neovain | v2 | 3/3 | 3/3 | 1,480 | 3.7 | 2.7 | 19s | $0.20 |
-| Opus 5.5 | neovain | v3 | 3/3 | 3/3 | 991 | 3.0 | 2.0 | 14s | $0.19 |
-| Sonnet 5.5 | neovain | v1 | 3/3 | 3/3 | 2,006 | 4.0 | 4.7 | 23s | $0.11 |
-| Sonnet 5.5 | neovain | v2 | 3/3 | 3/3 | 1,893 | 5.3 | 5.3 | 24s | $0.12 |
-| Sonnet 5.5 | neovain | v3 | 3/3 | 3/3 | 1,717 | 3.7 | 4.3 | 19s | $0.11 |
+| Opus 5.5 | neovain | 0.1.0, guidance v1 | 3/3 | 3/3 | 1,789 | 4.0 | 4.0 | 24s | $0.21 |
+| Opus 5.5 | neovain | 0.1.0, guidance v2 | 3/3 | 3/3 | 1,480 | 3.7 | 2.7 | 19s | $0.20 |
+| Opus 5.5 | neovain | 0.1.0, guidance v3 | 3/3 | 3/3 | 991 | 3.0 | 2.0 | 14s | $0.19 |
+| Opus 5.5 | neovain | 0.2.0 | 3/3 | 3/3 | 1,075 | 3.3 | 2.3 | 15s | $0.21 |
+| Sonnet 5.5 | neovain | 0.1.0, guidance v1 | 3/3 | 3/3 | 2,006 | 4.0 | 4.7 | 23s | $0.11 |
+| Sonnet 5.5 | neovain | 0.1.0, guidance v2 | 3/3 | 3/3 | 1,893 | 5.3 | 5.3 | 24s | $0.12 |
+| Sonnet 5.5 | neovain | 0.1.0, guidance v3 | 3/3 | 3/3 | 1,717 | 3.7 | 4.3 | 19s | $0.11 |
+| Sonnet 5.5 | neovain | 0.2.0 | 3/3 | 3/3 | 1,457 | 3.7 | 4.0 | 16s | $0.12 |
 <!-- /generated:guidance -->
 
 ### Codex CLI, medium effort
 
 GPT-6 Astra, Sol and Luna, GPT-5.6 Sol, Terra and Luna, and GPT-5.5, all at medium effort. The
-edit arm is Codex's own patch tool. The neovain arm ran under guidance v2 and again under v3.
+edit arm is Codex's own patch tool. The neovain arm ran three times: with 0.1.0 under guidance
+v2 and v3, and with 0.2.0.
 
 <!-- generated:codex -->
 **Large structural edits**
 
-| Model | Tool | Guidance | Exact | Code correct | Output tokens | Tool calls | Wall time |
+| Model | Tool | neovain | Exact | Code correct | Output tokens | Tool calls | Wall time |
 |---|---|---|---|---|---|---|---|
 | GPT-6 Astra | Patch tool |  | 3/3 | 3/3 | 923 | 7.7 | 43s |
-| GPT-6 Astra | neovain | v2 | 3/3 | 3/3 | 1,073 | 10.7 | 52s |
-| GPT-6 Astra | neovain | v3 | 3/3 | 3/3 | 772 | 10.0 | 56s |
+| GPT-6 Astra | neovain | 0.1.0, guidance v2 | 3/3 | 3/3 | 1,073 | 10.7 | 52s |
+| GPT-6 Astra | neovain | 0.1.0, guidance v3 | 3/3 | 3/3 | 772 | 10.0 | 56s |
+| GPT-6 Astra | neovain | 0.2.0 | 3/3 | 3/3 | 671 | 9.7 | 37s |
 | GPT-6 Sol | Patch tool |  | 3/3 | 3/3 | 3,372 | 13.3 | 85s |
-| GPT-6 Sol | neovain | v2 | 3/3 | 3/3 | 3,945 | 22.3 | 110s |
-| GPT-6 Sol | neovain | v3 | 2/3 | 2/3 | 3,814 | 19.7 | 144s |
+| GPT-6 Sol | neovain | 0.1.0, guidance v2 | 3/3 | 3/3 | 3,945 | 22.3 | 110s |
+| GPT-6 Sol | neovain | 0.1.0, guidance v3 | 2/3 | 2/3 | 3,814 | 19.7 | 144s |
+| GPT-6 Sol | neovain | 0.2.0 | 2/3 | 2/3 | 2,352 | 16.3 | 62s |
 | GPT-6 Luna | Patch tool |  | 0/3 | 0/3 | 3,095 | 7.3 | 91s |
-| GPT-6 Luna | neovain | v2 | 0/3 | 2/3 | 4,452 | 15.0 | 148s |
-| GPT-6 Luna | neovain | v3 | 0/3 | 0/3 | 4,288 | 12.0 | 121s |
+| GPT-6 Luna | neovain | 0.1.0, guidance v2 | 0/3 | 2/3 | 4,452 | 15.0 | 148s |
+| GPT-6 Luna | neovain | 0.1.0, guidance v3 | 0/3 | 0/3 | 4,288 | 12.0 | 121s |
+| GPT-6 Luna | neovain | 0.2.0 | 1/3 | 1/3 | 3,967 | 12.3 | 108s |
 | GPT-5.6 Sol | Patch tool |  | 2/3 | 2/3 | 5,998 | 10.3 | 132s |
-| GPT-5.6 Sol | neovain | v2 | 3/3 | 3/3 | 4,199 | 11.3 | 101s |
-| GPT-5.6 Sol | neovain | v3 | 3/3 | 3/3 | 2,833 | 9.0 | 77s |
+| GPT-5.6 Sol | neovain | 0.1.0, guidance v2 | 3/3 | 3/3 | 4,199 | 11.3 | 101s |
+| GPT-5.6 Sol | neovain | 0.1.0, guidance v3 | 3/3 | 3/3 | 2,833 | 9.0 | 77s |
+| GPT-5.6 Sol | neovain | 0.2.0 | 3/3 | 3/3 | 2,726 | 8.7 | 68s |
 | GPT-5.6 Terra | Patch tool |  | 0/3 | 1/3 | 7,343 | 10.0 | 151s |
-| GPT-5.6 Terra | neovain | v2 | 1/3 | 2/3 | 7,234 | 17.0 | 150s |
-| GPT-5.6 Terra | neovain | v3 | 2/3 | 3/3 | 4,894 | 10.0 | 107s |
+| GPT-5.6 Terra | neovain | 0.1.0, guidance v2 | 1/3 | 2/3 | 7,234 | 17.0 | 150s |
+| GPT-5.6 Terra | neovain | 0.1.0, guidance v3 | 2/3 | 3/3 | 4,894 | 10.0 | 107s |
+| GPT-5.6 Terra | neovain | 0.2.0 | 1/3 | 1/3 | 3,479 | 7.3 | 74s |
 | GPT-5.6 Luna | Patch tool |  | 2/3 | 2/3 | 8,403 | 14.3 | 169s |
-| GPT-5.6 Luna | neovain | v2 | 1/3 | 2/3 | 8,355 | 21.0 | 180s |
-| GPT-5.6 Luna | neovain | v3 | 1/3 | 2/3 | 7,383 | 16.7 | 168s |
+| GPT-5.6 Luna | neovain | 0.1.0, guidance v2 | 1/3 | 2/3 | 8,355 | 21.0 | 180s |
+| GPT-5.6 Luna | neovain | 0.1.0, guidance v3 | 1/3 | 2/3 | 7,383 | 16.7 | 168s |
+| GPT-5.6 Luna | neovain | 0.2.0 | 3/3 | 3/3 | 4,380 | 9.7 | 94s |
 | GPT-5.5 | Patch tool |  | left out: all 3 runs broke the rules |  |  |  |  |
-| GPT-5.5 | neovain | v2 | 1/3 | 3/3 | 5,815 | 25.7 | 126s |
-| GPT-5.5 | neovain | v3 | 3/3 | 3/3 | 4,552 | 18.7 | 95s |
+| GPT-5.5 | neovain | 0.1.0, guidance v2 | 1/3 | 3/3 | 5,815 | 25.7 | 126s |
+| GPT-5.5 | neovain | 0.1.0, guidance v3 | 3/3 | 3/3 | 4,552 | 18.7 | 95s |
+| GPT-5.5 | neovain | 0.2.0 | 3/3 | 3/3 | 3,764 | 19.7 | 83s |
 
 **Small edits**
 
-| Model | Tool | Guidance | Exact | Code correct | Output tokens | Tool calls | Wall time |
+| Model | Tool | neovain | Exact | Code correct | Output tokens | Tool calls | Wall time |
 |---|---|---|---|---|---|---|---|
 | GPT-6 Astra | Patch tool |  | 3/3 | 3/3 | 681 | 3.0 | 29s |
-| GPT-6 Astra | neovain | v2 | 3/3 | 3/3 | 798 | 7.3 | 38s |
-| GPT-6 Astra | neovain | v3 | 3/3 | 3/3 | 462 | 6.0 | 39s |
+| GPT-6 Astra | neovain | 0.1.0, guidance v2 | 3/3 | 3/3 | 798 | 7.3 | 38s |
+| GPT-6 Astra | neovain | 0.1.0, guidance v3 | 3/3 | 3/3 | 462 | 6.0 | 39s |
+| GPT-6 Astra | neovain | 0.2.0 | 3/3 | 3/3 | 716 | 6.7 | 35s |
 | GPT-6 Sol | Patch tool |  | 3/3 | 3/3 | 906 | 5.0 | 29s |
-| GPT-6 Sol | neovain | v2 | 3/3 | 3/3 | 2,101 | 7.3 | 57s |
-| GPT-6 Sol | neovain | v3 | 3/3 | 3/3 | 2,077 | 7.7 | 67s |
+| GPT-6 Sol | neovain | 0.1.0, guidance v2 | 3/3 | 3/3 | 2,101 | 7.3 | 57s |
+| GPT-6 Sol | neovain | 0.1.0, guidance v3 | 3/3 | 3/3 | 2,077 | 7.7 | 67s |
+| GPT-6 Sol | neovain | 0.2.0 | 3/3 | 3/3 | 1,820 | 6.7 | 43s |
 | GPT-6 Luna | Patch tool |  | 2/3 | 2/3 | 740 | 3.0 | 23s |
-| GPT-6 Luna | neovain | v2 | 2/3 | 3/3 | 2,120 | 5.3 | 46s |
-| GPT-6 Luna | neovain | v3 | 2/3 | 2/3 | 2,789 | 7.7 | 78s |
+| GPT-6 Luna | neovain | 0.1.0, guidance v2 | 2/3 | 3/3 | 2,120 | 5.3 | 46s |
+| GPT-6 Luna | neovain | 0.1.0, guidance v3 | 2/3 | 2/3 | 2,789 | 7.7 | 78s |
+| GPT-6 Luna | neovain | 0.2.0 | 2/3 | 2/3 | 2,614 | 9.0 | 66s |
 | GPT-5.6 Sol | Patch tool |  | 3/3 | 3/3 | 938 | 3.0 | 25s |
-| GPT-5.6 Sol | neovain | v2 | 3/3 | 3/3 | 2,180 | 4.3 | 50s |
-| GPT-5.6 Sol | neovain | v3 | 3/3 | 3/3 | 2,116 | 4.0 | 63s |
+| GPT-5.6 Sol | neovain | 0.1.0, guidance v2 | 3/3 | 3/3 | 2,180 | 4.3 | 50s |
+| GPT-5.6 Sol | neovain | 0.1.0, guidance v3 | 3/3 | 3/3 | 2,116 | 4.0 | 63s |
+| GPT-5.6 Sol | neovain | 0.2.0 | 3/3 | 3/3 | 2,081 | 4.3 | 51s |
 | GPT-5.6 Terra | Patch tool |  | 3/3 | 3/3 | 929 | 3.0 | 25s |
-| GPT-5.6 Terra | neovain | v2 | 3/3 | 3/3 | 3,651 | 6.0 | 76s |
-| GPT-5.6 Terra | neovain | v3 | 2/3 | 3/3 | 2,175 | 4.3 | 48s |
+| GPT-5.6 Terra | neovain | 0.1.0, guidance v2 | 3/3 | 3/3 | 3,651 | 6.0 | 76s |
+| GPT-5.6 Terra | neovain | 0.1.0, guidance v3 | 2/3 | 3/3 | 2,175 | 4.3 | 48s |
+| GPT-5.6 Terra | neovain | 0.2.0 | 3/3 | 3/3 | 1,989 | 4.0 | 49s |
 | GPT-5.6 Luna | Patch tool |  | 3/3 | 3/3 | 1,136 | 3.7 | 29s |
-| GPT-5.6 Luna | neovain | v2 | 2/3 | 3/3 | 7,856 | 14.0 | 162s |
-| GPT-5.6 Luna | neovain | v3 | 3/3 | 3/3 | 6,025 | 8.0 | 124s |
+| GPT-5.6 Luna | neovain | 0.1.0, guidance v2 | 2/3 | 3/3 | 7,856 | 14.0 | 162s |
+| GPT-5.6 Luna | neovain | 0.1.0, guidance v3 | 3/3 | 3/3 | 6,025 | 8.0 | 124s |
+| GPT-5.6 Luna | neovain | 0.2.0 | 3/3 | 3/3 | 4,861 | 8.0 | 105s |
 | GPT-5.5 | Patch tool |  | 3/3 | 3/3 | 1,172 | 4.0 | 30s |
-| GPT-5.5 | neovain | v2 | 3/3 | 3/3 | 2,572 | 8.3 | 57s |
-| GPT-5.5 | neovain | v3 | 3/3 | 3/3 | 2,610 | 8.7 | 57s |
+| GPT-5.5 | neovain | 0.1.0, guidance v2 | 3/3 | 3/3 | 2,572 | 8.3 | 57s |
+| GPT-5.5 | neovain | 0.1.0, guidance v3 | 3/3 | 3/3 | 2,610 | 8.7 | 57s |
+| GPT-5.5 | neovain | 0.2.0 | 3/3 | 3/3 | 2,843 | 7.0 | 60s |
+
+**All seven models together, large structural edits**
+
+| Tool | Runs | Left out | Exact | Code correct | Right code, wrong blank lines | Wrong code | Output tokens | Wall time |
+|---|---|---|---|---|---|---|---|---|
+| Patch tool | 18 | 3 | 10 | 11 | 1 | 7 | 4,856 | 112s |
+| neovain 0.1.0, guidance v2 | 21 | 0 | 12 | 18 | 6 | 3 | 5,011 | 124s |
+| neovain 0.1.0, guidance v3 | 21 | 0 | 14 | 16 | 2 | 5 | 4,077 | 110s |
+| neovain 0.2.0 | 21 | 0 | 16 | 16 | 0 | 5 | 3,048 | 75s |
+
+**All seven models together, small edits**
+
+| Tool | Runs | Left out | Exact | Code correct | Right code, wrong blank lines | Wrong code | Output tokens | Wall time |
+|---|---|---|---|---|---|---|---|---|
+| Patch tool | 21 | 0 | 20 | 20 | 0 | 1 | 929 | 27s |
+| neovain 0.1.0, guidance v2 | 21 | 0 | 19 | 21 | 2 | 0 | 3,040 | 69s |
+| neovain 0.1.0, guidance v3 | 21 | 0 | 19 | 20 | 1 | 1 | 2,608 | 68s |
+| neovain 0.2.0 | 21 | 0 | 20 | 20 | 0 | 1 | 2,418 | 58s |
 <!-- /generated:codex -->
 
-With the strongest models the patch tool is as good as neovain or better, and it is clearly
-better on small edits. Codex does not retype the text it moves, and in some large runs the
-model wrote a script to work out its patch. With the weaker models neovain got the code right
-more often on the large task, and lost most of its exact scores to blank lines.
+On the small task the patch tool is clearly better: it needs well under half the output and less
+than half the time. Codex does not retype the text it moves, and in some large runs the model
+wrote a script to work out its patch.
+
+On the large task neovain 0.2.0 is ahead. Over the six models with valid runs in both arms it
+used 2,929 output tokens against the patch tool's 4,856 and took 74s against 112s, and it got
+the code right in 13 of 18 runs against 11. With 0.1.0 under guidance v2 the two were level on
+output, and the patch tool was a little faster.
+
+Per model the picture is mixed, and one run moves a score. With 0.2.0, GPT-5.6 Luna and GPT-6
+Luna each gained a correct large run over guidance v3, and GPT-5.6 Terra lost two.
 
 ### Earlier batches
 
@@ -233,9 +287,18 @@ Counts over every batch in `results.jsonl`.
 | Agent | Tool | Runs | Wrong tool (left out) | Wrong code | Right code, wrong blank lines | Scripted its patch |
 |---|---|---|---|---|---|---|
 | Claude | Edit tool | 30 | 0 | 0 | 0 | 0 |
-| Claude | neovain | 78 | 0 | 2 | 0 |  |
+| Claude | neovain | 90 | 0 | 2 | 0 |  |
 | Codex | Patch tool | 60 | 3 | 14 | 3 | 7 |
-| Codex | neovain | 120 | 0 | 11 | 21 |  |
+| Codex | neovain | 162 | 0 | 17 | 21 |  |
+
+Runs on the large task that threw neovain's output away:
+
+| Agent | neovain | Runs | Threw the output away |
+|---|---|---|---|
+| Claude | 0.1.0 | 30 | 25 |
+| Claude | 0.2.0 | 6 | 1 |
+| Codex | 0.1.0 | 60 | 4 |
+| Codex | 0.2.0 | 21 | 0 |
 <!-- /generated:behavior -->
 
 **Wrong tool.** GPT-5.5, in all three of its large runs in the edit arm, rewrote the file with
@@ -252,10 +315,19 @@ low.
 the end of the file, left over after moving a class there together with the blank lines that
 followed it.
 
-**Skipping the diff.** On large edits, agents sent neovain's output to `/dev/null` or filtered
-it, and checked the result some other way. Both of Claude's wrong edits were in the `sync_all`
-wrap. In the one we examined, the line range ended at the end of the class instead of the end of
-the method: valid Vim, wrong edit, and nobody read the diff.
+**Throwing the output away.** neovain 0.1.0 printed the whole diff, about 2,000 lines on the
+large task. Claude sent it to `/dev/null`, filtered it or kept only a few lines in 25 of its
+30 large runs, and checked the result some other way. Codex did that in 4 of 60. Both of
+Claude's wrong edits were in the `sync_all` wrap. In the one we examined, the line range ended
+at the end of the class instead of the end of the method: valid Vim, wrong edit, and nobody
+read the diff. With the summary of 0.2.0, Claude threw the output away in 1 of 6 large runs and
+Codex in none of 21. The count covers the pipeline a neovain call is in: `> /dev/null`, a pipe
+into `grep`, `wc`, `awk` or `sed`, or `head` or `tail` with fewer than 20 lines.
+
+**Code in the wrong place.** Of Codex's five wrong large runs with 0.2.0, four changed code
+outside the requested edits, mostly a class swap that landed in the wrong place. The summary
+reported the move and named the first block it passed, which was not enough to show that it
+had gone too far.
 
 **One call per change.** Under guidance v1, Codex made a neovain call for each change, twelve
 in one run. Claude chained its steps without being told.
@@ -267,24 +339,30 @@ nothing. neovain refused the call and the next one was right.
 
 1. **Against Claude's Edit tool, neovain saves most on large structural edits** and ties on
    small ones. The saving is in output: the agent writes a range and a command, not the text.
-2. **Against Codex's patch tool the gap is small.** That tool already avoids retyping. neovain
-   is not a better editor in general; it is a cheaper one than string replacement.
+2. **Against Codex's patch tool it depends on the edit.** That tool already avoids retyping.
+   On small edits it needs well under half of neovain's output. On large structural edits
+   neovain 0.2.0 needs about 40% less output and a third less time than the patch tool.
 3. **Correctness depends on the model more than the tool.** Strong models pass with either.
    Weaker models fail the large task with either, in different ways: unfinished renames and
-   damaged code with the patch tool, blank lines with neovain.
+   damaged code with the patch tool, blank lines and misplaced blocks with neovain.
 4. **Guidance has to say how, and it is not a cure.** Telling Codex to "mind the seams" changed
    nothing, so v3 gives a method for selecting blocks. With it, Codex's blank-line misses on the
    large task fell from 6 runs to 2 of 21, and exact scores rose from 12 to 14. Runs with wrong
    code went from 3 to 5, so code-correct scores fell from 18 to 16. At three runs per row that
    is a small net change. For Claude, v3 cut output on the large task.
-5. **Agents do not read large diffs.** A compact summary of what changed would serve them
-   better than a 2,000-line diff.
+5. **Agents do not read large diffs. They do read a summary.** With a 2,000-line diff, Claude
+   threw the output away in 25 of 30 large runs; with the summary of 0.2.0, in 1 of 6. Codex's
+   blank-line misses on the large task went from 2 of 21 runs to none, and its output fell by
+   a quarter. Its runs with wrong code stayed at 5 of 21.
 
 ## Limitations
 
 - Three runs per row. That shows large effects and not small ones, and pass counts on hard
   tasks vary from run to run.
 - Two task sets, both Python, both single-file.
-- Guidance v2 and v3 were written after seeing failures on these tasks.
+- Guidance v2 and v3 and the summary of 0.2.0 were written after seeing failures on these
+  tasks.
+- 0.2.0 changed the tool's output and the guidance together, so their effects cannot be told
+  apart. Its batches ran on a later day than the edit arm they are compared with.
 - Codex's rules rest on the prompt and a log check, not on a switch.
 - The models have been trained heavily on their own editing tools and not at all on neovain.
