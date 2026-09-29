@@ -3,8 +3,10 @@
 //! The whole step sequence runs in one Neovim process. The file is only written if every step
 //! succeeds; the first failing step aborts the run and leaves the file untouched.
 
+mod summary;
+
 use serde_json::{json, Value};
-use similar::TextDiff;
+use similar::{DiffTag, TextDiff};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode, Stdio};
@@ -25,8 +27,10 @@ Steps (applied in order, stopping at the first failure; file untouched on failur
   anything     normal-mode keys, <Esc>/<CR>/<C-v> notation, e.g. 'ciwnewname<Esc>'
 
 Options:
-  -n, --dry-run      show the diff without writing
+  -n, --dry-run      show the changes without writing
   -C, --context N    diff context lines (default 2)
+      --diff MODE    what to print. auto (default): the diff if it is short, a summary of the
+                     changes if it is long. full: always the diff. summary: always the summary
       --sw N         shiftwidth for > and < when the file indents with spaces (default 4)
       --timeout SECS default 10
   --                 treat everything after as steps (for steps starting with '-')
@@ -44,9 +48,31 @@ struct Args {
     file: PathBuf,
     steps: Vec<String>,
     dry_run: bool,
+    diff: Mode,
     context: usize,
     sw: u32,
     timeout: Duration,
+}
+
+/// What to print after an edit that changed the file.
+#[derive(Clone, Copy, PartialEq)]
+enum Mode {
+    /// The diff if it is short, the summary if it is long.
+    Auto,
+    Full,
+    Summary,
+}
+
+impl std::str::FromStr for Mode {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, ()> {
+        match s {
+            "auto" => Ok(Mode::Auto),
+            "full" => Ok(Mode::Full),
+            "summary" => Ok(Mode::Summary),
+            _ => Err(()),
+        }
+    }
 }
 
 enum Fail {
@@ -57,6 +83,7 @@ enum Fail {
 fn parse_args() -> Result<Option<Args>, String> {
     let mut it = env::args().skip(1);
     let (mut dry_run, mut context, mut sw, mut timeout) = (false, 2usize, 4u32, 10.0f64);
+    let mut diff = Mode::Auto;
     let mut positional = Vec::new();
     let mut only_steps = false;
     fn value<T: std::str::FromStr>(flag: &str, v: Option<String>) -> Result<T, String> {
@@ -84,6 +111,8 @@ fn parse_args() -> Result<Option<Args>, String> {
             "-C" | "--context" => context = value(&a, it.next())?,
             "--sw" => sw = value(&a, it.next())?,
             "--timeout" => timeout = value(&a, it.next())?,
+            "--diff" => diff = value(&a, it.next())?,
+            s if s.starts_with("--diff=") => diff = value("--diff", s.split_once('=').map(|(_, v)| v.to_string()))?,
             s if s.starts_with("--") => return Err(format!("unknown option {s}")),
             _ => positional.push(a),
         }
@@ -92,7 +121,7 @@ fn parse_args() -> Result<Option<Args>, String> {
         return Err("need FILE and at least one STEP (see --help)".into());
     }
     let file = PathBuf::from(positional.remove(0));
-    Ok(Some(Args { file, steps: positional, dry_run, context, sw, timeout: Duration::from_secs_f64(timeout) }))
+    Ok(Some(Args { file, steps: positional, dry_run, diff, context, sw, timeout: Duration::from_secs_f64(timeout) }))
 }
 
 /// Git Bash/MSYS rewrites args like '/foo<CR>' into 'C:/Program Files/Git/foo<CR>' before we see them.
@@ -238,7 +267,17 @@ fn run(a: Args) -> Result<(), Fail> {
     let (old, new) = (String::from_utf8_lossy(&before), String::from_utf8_lossy(&after));
     let name = a.file.display().to_string();
     let diff = TextDiff::from_lines(old.as_ref(), new.as_ref());
-    let _ = write!(out, "{}", diff.unified_diff().context_radius(a.context).header(&name, &name));
+    let full = diff.unified_diff().context_radius(a.context).header(&name, &name).to_string();
+    let (added, removed) = diff.ops().iter().filter(|op| op.tag() != DiffTag::Equal).fold((0, 0), |(added, removed), op| {
+        (added + op.new_range().len(), removed + op.old_range().len())
+    });
+    let short = added + removed <= summary::FULL_DIFF_MAX_CHANGED && full.lines().count() <= summary::OUTPUT_MAX_LINES;
+    if a.diff == Mode::Full || (a.diff == Mode::Auto && short) {
+        let _ = write!(out, "{full}");
+    } else {
+        let totals = summary::Totals { added, removed, hunks: diff.grouped_ops(a.context).len() };
+        let _ = write!(out, "{}", summary::render(&summary::analyze(&old, &new), &name, &totals));
+    }
     if a.dry_run {
         let _ = writeln!(out, "(dry run, not written)");
     } else {
