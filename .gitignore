@@ -9,3 +9,6 @@ PLAN-*.md
 *.plan.md
 /plans/
 /.claude/plans/
+
+# Cloudflare deploy state
+/.wrangler/
