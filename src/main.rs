@@ -1,4 +1,4 @@
-//! neovain: apply vim keystrokes / ex commands to a file with headless Neovim, print a diff.
+//! neovain: apply vim keystrokes / ex commands to a file with headless Neovim, print what changed.
 //!
 //! The whole step sequence runs in one Neovim process. The file is only written if every step
 //! succeeds; the first failing step aborts the run and leaves the file untouched.

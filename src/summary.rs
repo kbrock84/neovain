@@ -15,7 +15,8 @@
 //!    of indentation.
 //! 4. Of those runs, the heaviest set that kept its order stayed. The others moved.
 //! 5. Common lines at the ends of a run join the run they touch. The lines still unclaimed are
-//!    aligned with an ordinary diff, between the runs that stayed.
+//!    aligned with an ordinary diff, between the runs that stayed. A line or two that a rewritten
+//!    stretch shares with the text it replaced is not reported on its own.
 
 use similar::{capture_diff_slices_deadline, Algorithm, DiffOp};
 use std::collections::HashMap;
@@ -35,14 +36,16 @@ const MAX_REPLACEMENTS: usize = 5;
 const HEAD_WEIGHT: u64 = 1 << 24;
 /// A run of at most this many rows between two larger changes counts as part of the change.
 const ISLAND_MAX: usize = 2;
+/// A deleted run is reported unit by unit if it holds at most this many units.
+const SPLIT_MAX: usize = 3;
 const MAX_WARNINGS: usize = 8;
 const MAX_NOTES: usize = 4;
 /// Excerpt lines are cut at this many characters.
 const MAX_WIDTH: usize = 100;
 const DIFF_TIME: Duration = Duration::from_secs(3);
 
-const LEGEND: &str = "summary, not the diff (--diff full prints it). \
--N: line N of the old file. +N: line N of the new file. N: the line next to the block, new file.";
+const LEGEND: &str =
+    "summary (--diff full prints the diff). -N: old line. +N: new line. N: line next to the block, in the new file.";
 
 /// First and last line of a block, counted from 1.
 pub type Span = (usize, usize);
@@ -78,6 +81,9 @@ pub struct Block<'a> {
     pub outdented: Option<(usize, usize)>,
     /// For a block that moved: true if it went down, and the lines it passed, which stayed.
     pub passed: Option<(bool, Span)>,
+    /// For a moved or deleted block with a body, lines indented more than its first line: the
+    /// other lines indented as much as the first. A block of three functions has two.
+    pub peers: usize,
 }
 
 /// One token replaced by another on many lines.
@@ -572,13 +578,15 @@ fn passed(n: &[Row], map: &Map, i: usize, j: usize, len: usize) -> Option<(bool,
 /// A block of rows of the old file, of the new file, or of both.
 fn block<'a>(kind: Kind, old: Option<&[Row]>, new: Option<&[Row]>, after: usize) -> Block<'a> {
     let span = |rows: &[Row]| (rows[0].no, rows[rows.len() - 1].no);
-    // Text that is new has no block it could have run past.
+    // Text that is new has no block it could have run past, and no units to count.
     let whole = match kind {
         Kind::Inserted | Kind::Changed => None,
         _ => new.or(old),
     };
+    let peers = whole.filter(|rows| kind != Kind::Reindented && rows.iter().any(|r| r.width > rows[0].width));
+    let peers = peers.map_or(0, |rows| rows[1..].iter().filter(|r| r.width == rows[0].width).count());
     let (old, new, outdented) = (old.map(span), new.map(span), whole.and_then(outdented));
-    Block { kind, old, new, indent: Indent::Same, after, outdented, passed: None }
+    Block { kind, old, new, indent: Indent::Same, after, outdented, passed: None, peers }
 }
 
 /// The blocks, in the order of the new file.
@@ -644,7 +652,9 @@ fn blocks<'a>(o: &[Row<'a>], n: &[Row<'a>], map: &Map) -> Vec<Block<'a>> {
             (None, Some(j), ..) | (None, None, None, Some(j)) => above(j),
             (None, None, None, None) => 0,
         };
-        found.extend(pieces(o, gone).into_iter().map(|piece| block(Kind::Deleted, Some(&o[piece]), None, after)));
+        // Two or three units deleted together are reported one by one, more as one block.
+        let units = Some(pieces(o, gone.clone())).filter(|units| units.len() <= SPLIT_MAX).unwrap_or(vec![gone]);
+        found.extend(units.into_iter().map(|unit| block(Kind::Deleted, Some(&o[unit]), None, after)));
     }
     for run in inserted.into_iter().flatten() {
         found.push(block(Kind::Inserted, None, Some(&n[run.clone()]), above(run.start)));
@@ -760,30 +770,31 @@ fn indent_text(indent: Indent) -> String {
     }
 }
 
-/// The first line of a block, to name it.
-fn label(text: &[&str], span: Span) -> String {
-    format!("  ({})", cut(text[span.0 - 1].trim(), 60))
+/// The first line of a block, to name it, and how many more lines like it the block holds.
+fn label(text: &[&str], span: Span, peers: usize) -> String {
+    let more = if peers == 0 { String::new() } else { format!(" +{peers} more at this indent") };
+    format!("  ({}){more}", cut(text[span.0 - 1].trim(), 60))
 }
 
 /// What happened to a block, in one line. Two more lines follow where they apply: what a moved
 /// block passed, and a warning if the block holds lines indented less than its first one.
 fn headlines(a: &Analysis, b: &Block) -> Vec<String> {
     let first = match (b.kind, b.old, b.new) {
-        (Kind::Deleted, Some(o), _) => format!("deleted {}: {}{}", lines(o), range(o), label(&a.old, o)),
-        (Kind::Inserted, _, Some(n)) => format!("inserted {}: {}{}", lines(n), range(n), label(&a.new, n)),
+        (Kind::Deleted, Some(o), _) => format!("deleted {}: {}{}", lines(o), range(o), label(&a.old, o, b.peers)),
+        (Kind::Inserted, _, Some(n)) => format!("inserted {}: {}{}", lines(n), range(n), label(&a.new, n, b.peers)),
         (Kind::Changed, Some(o), Some(n)) => {
             let to = if o.1 - o.0 == n.1 - n.0 { String::new() } else { format!(" to {}", n.1 - n.0 + 1) };
-            format!("changed {}{to}: {} -> {}{}", lines(o), range(o), range(n), label(&a.new, n))
+            format!("changed {}{to}: {} -> {}{}", lines(o), range(o), range(n), label(&a.new, n, b.peers))
         }
         (_, Some(o), Some(n)) => {
-            let verb = if b.kind == Kind::Moved { "moved" } else { "reindented" };
-            format!("{verb} {}: {} -> {}{}{}", lines(n), range(o), range(n), indent_text(b.indent), label(&a.new, n))
+            let (verb, indent) = (if b.kind == Kind::Moved { "moved" } else { "reindented" }, indent_text(b.indent));
+            format!("{verb} {}: {} -> {}{indent}{}", lines(n), range(o), range(n), label(&a.new, n, b.peers))
         }
         _ => String::new(),
     };
     let passed = b.passed.map(|(down, span)| {
         let way = if down { "down" } else { "up" };
-        format!("  {way} past {}: {}{}", lines(span), range(span), label(&a.new, span))
+        format!("  {way} past {}: {}{}", lines(span), range(span), label(&a.new, span, 0))
     });
     let outdented = b.outdented.map(|(n, first)| {
         let (verb, sign) = (if n == 1 { "line is" } else { "lines are" }, if b.new.is_some() { '+' } else { '-' });
@@ -846,13 +857,28 @@ fn excerpt(a: &Analysis, b: &Block, level: &Level) -> Vec<String> {
     if level.edge == 0 {
         return out;
     }
+    // A long line that replaced another may differ from it only past the place where the
+    // excerpt is cut. Both are then shown from a little before the difference.
+    let pairs = match (b.kind, b.old, b.new) {
+        (Kind::Changed, Some(old), Some(new)) if old.1 - old.0 == new.1 - new.0 => Some((old.0, new.0)),
+        _ => None,
+    };
+    let skipped = |k: usize| {
+        let (old, new) = pairs.map_or(("", ""), |(old, new)| (a.old[old + k - 1], a.new[new + k - 1]));
+        let same = old.chars().zip(new.chars()).take_while(|(x, y)| x == y).count();
+        if same + 20 > MAX_WIDTH { same - 20 } else { 0 }
+    };
     let mut side = |text: &[&str], sign: char, span: Span, peers: bool| {
         let mut last = span.0;
         for no in shown(text, span, level, peers) {
             if no > last + 1 {
                 out.push("   ...".to_string());
             }
-            out.push(cut(&format!("  {sign}{no}:{}", text[no - 1]), MAX_WIDTH));
+            let line = match skipped(no - span.0) {
+                0 => text[no - 1].to_string(),
+                skip => format!("...{}", text[no - 1].chars().skip(skip).collect::<String>()),
+            };
+            out.push(cut(&format!("  {sign}{no}:{line}"), MAX_WIDTH));
             last = no;
         }
     };
@@ -867,9 +893,13 @@ fn excerpt(a: &Analysis, b: &Block, level: &Level) -> Vec<String> {
         if b.after > 0 {
             out.insert(0, line(b.after));
         }
-        let end = b.new.map_or(b.after, |n| n.1);
-        let next = (end + 1..=a.new.len()).find(|&no| !a.new[no - 1].trim().is_empty());
-        out.push(next.map_or("   (end of file)".to_string(), line));
+        let (end, last) = (b.new.map_or(b.after, |n| n.1), a.new.len());
+        let next = (end + 1..=last).find(|&no| !a.new[no - 1].trim().is_empty());
+        out.push(match next {
+            Some(no) => line(no),
+            None if end < last => format!("   (end of file, after {})", count(last - end, "blank line")),
+            None => "   (end of file)".to_string(),
+        });
     }
     out
 }
@@ -877,7 +907,8 @@ fn excerpt(a: &Analysis, b: &Block, level: &Level) -> Vec<String> {
 pub fn render(a: &Analysis, name: &str, totals: &Totals) -> String {
     let Totals { added, removed, hunks } = totals;
     let (hunks, before, after) = (count(*hunks, "hunk"), a.old.len(), a.new.len());
-    let mut top = vec![format!("{name}: +{added} -{removed} lines in {hunks}; {before} -> {after} lines"), LEGEND.to_string()];
+    let first = format!("{name}: +{added} -{removed} lines in {hunks}; {before} -> {after} lines");
+    let mut top = vec![first, LEGEND.to_string()];
     let (before, after) = a.end_newlines;
     if before != after {
         let blank = match after {
@@ -1130,6 +1161,37 @@ mod tests {
         let text = render(&found, "f.py", &totals());
         assert_eq!(text.lines().count(), OUTPUT_MAX_LINES, "{text}");
         assert!(text.ends_with("blocks not shown; --diff full shows every change\n"), "{text}");
+    }
+
+    #[test]
+    fn units_deleted_together_are_told_apart_or_counted() {
+        let units = |names: &[&str]| names.iter().map(|f| format!("def {f}():\n    return {f}\n\n")).collect::<String>();
+        let (top, end) = (part("top", 3), part("end", 3));
+        let found = compare(format!("{top}\n{}{end}", units(&["a", "b"])), format!("{top}\n{end}"));
+        assert_eq!(kinds(&found), [(Kind::Deleted, Some((5, 6)), None), (Kind::Deleted, Some((8, 9)), None)]);
+        assert!(found.spacing.is_empty());
+
+        let found = compare(format!("{top}\n{}{end}", units(&["a", "b", "c", "d", "e"])), format!("{top}\n{end}"));
+        assert_eq!(kinds(&found), [(Kind::Deleted, Some((5, 18)), None)]);
+        let text = render(&found, "f.py", &totals());
+        assert!(text.contains("deleted 14 lines: 5-18  (def a():) +4 more at this indent\n"), "{text}");
+        assert!(text.contains("  -8:def b():\n"), "{text}");
+    }
+
+    #[test]
+    fn the_excerpt_says_where_the_file_ends() {
+        let found = compare("a = 1\nb = 2\n", "a = 1\nb = 2\nc = 3\n\n\n");
+        let text = render(&found, "f.py", &totals());
+        assert!(text.ends_with("   2:b = 2\n  +3:c = 3\n   (end of file, after 2 blank lines)\n"), "{text}");
+        assert!(text.contains("WARNING: file ends with 3 newlines, was 1 (2 blank lines at the end)\n"), "{text}");
+    }
+
+    #[test]
+    fn a_change_far_into_a_long_line_is_shown() {
+        let start = "word ".repeat(40);
+        let found = compare(format!("a = 1\n{start}old end\nb = 2\n"), format!("a = 1\n{start}new end\nb = 2\n"));
+        let text = render(&found, "f.md", &totals());
+        assert!(text.contains("  -2:...word word word word old end\n  +2:...word word word word new end\n"), "{text}");
     }
 
     #[test]
