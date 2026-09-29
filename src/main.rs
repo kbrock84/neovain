@@ -14,6 +14,8 @@ use std::time::{Duration, Instant};
 use std::{env, fs, thread};
 
 const DRIVER: &str = include_str!("driver.lua");
+/// The lines of context around each change in a diff, unless -C asks for another number.
+const DEFAULT_CONTEXT: usize = 2;
 
 const USAGE: &str = "\
 neovain: transactional vim editing for agents
@@ -82,7 +84,7 @@ enum Fail {
 
 fn parse_args() -> Result<Option<Args>, String> {
     let mut it = env::args().skip(1);
-    let (mut dry_run, mut context, mut sw, mut timeout) = (false, 2usize, 4u32, 10.0f64);
+    let (mut dry_run, mut context, mut sw, mut timeout) = (false, DEFAULT_CONTEXT, 4u32, 10.0f64);
     let mut diff = Mode::Auto;
     let mut positional = Vec::new();
     let mut only_steps = false;
@@ -217,7 +219,20 @@ fn write_atomic(path: &Path, data: &[u8]) -> std::io::Result<()> {
     fs::rename(&tmp, path)
 }
 
+/// The hunks of a diff printed with `context` lines around each change, and the lines that
+/// takes. The diff is not printed to find out.
+fn shape(diff: &TextDiff<str>, context: usize) -> (usize, usize) {
+    let lines = |op: &similar::DiffOp| match op.tag() {
+        DiffTag::Equal => op.old_range().len(),
+        _ => op.old_range().len() + op.new_range().len(),
+    };
+    let hunks = diff.grouped_ops(context);
+    // Two lines name the file, and one starts each hunk.
+    (hunks.len(), 2 + hunks.iter().map(|hunk| 1 + hunk.iter().map(lines).sum::<usize>()).sum::<usize>())
+}
+
 fn run(a: Args) -> Result<(), Fail> {
+    let started = Instant::now();
     if !a.file.is_file() {
         return Err(Fail::Usage(format!("no such file: {}", a.file.display())));
     }
@@ -266,17 +281,38 @@ fn run(a: Args) -> Result<(), Fail> {
     }
     let (old, new) = (String::from_utf8_lossy(&before), String::from_utf8_lossy(&after));
     let name = a.file.display().to_string();
-    let diff = TextDiff::from_lines(old.as_ref(), new.as_ref());
-    let full = diff.unified_diff().context_radius(a.context).header(&name, &name).to_string();
+    // The diff asked for with `--diff full` is the one 0.1.0 printed, however long it takes.
+    // Any other may give way to the summary, and stops being exact when its time is up. That
+    // is after the time it is given, or when the whole run has taken as long as --timeout.
+    let until = |time: Duration| {
+        let given = Instant::now() + time;
+        started.checked_add(a.timeout).map_or(given, |end| end.min(given))
+    };
+    let (mut config, deadline) = (TextDiff::configure(), until(summary::DIFF_TIME));
+    if a.diff != Mode::Full {
+        config.deadline(deadline);
+    }
+    let diff = config.diff_lines(old.as_ref(), new.as_ref());
+    let rough = a.diff != Mode::Full && Instant::now() >= deadline;
     let (added, removed) = diff.ops().iter().filter(|op| op.tag() != DiffTag::Equal).fold((0, 0), |(added, removed), op| {
         (added + op.new_range().len(), removed + op.old_range().len())
     });
-    let short = added + removed <= summary::FULL_DIFF_MAX_CHANGED && full.lines().count() <= summary::OUTPUT_MAX_LINES;
+    // What to print depends on the change, not on the context asked for with -C.
+    let (hunks, lines) = shape(&diff, DEFAULT_CONTEXT);
+    let short = !rough && added + removed <= summary::FULL_DIFF_MAX_CHANGED && lines <= summary::OUTPUT_MAX_LINES;
+    let found = summary::analyze(&old, &new, until(summary::ANALYSIS_TIME));
     if a.diff == Mode::Full || (a.diff == Mode::Auto && short) {
+        let full = diff.unified_diff().context_radius(a.context).header(&name, &name).to_string();
         let _ = write!(out, "{full}");
+        // Warnings follow the diff, after an empty line. Without any, this is what 0.1.0 printed.
+        let warnings = summary::warnings(&found);
+        if !warnings.is_empty() {
+            let _ = write!(out, "{}\n{warnings}", if full.ends_with('\n') { "" } else { "\n" });
+        }
     } else {
-        let totals = summary::Totals { added, removed, hunks: diff.grouped_ops(a.context).len() };
-        let _ = write!(out, "{}", summary::render(&summary::analyze(&old, &new), &name, &totals));
+        let hunks = if a.context == DEFAULT_CONTEXT { hunks } else { shape(&diff, a.context).0 };
+        let totals = summary::Totals { added, removed, hunks, rough };
+        let _ = write!(out, "{}", summary::render(&found, &name, &totals));
     }
     if a.dry_run {
         let _ = writeln!(out, "(dry run, not written)");

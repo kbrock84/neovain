@@ -208,15 +208,25 @@ fn literal_append_keeps_key_notation_and_empty_files_get_lf() {
     assert_eq!(fs::read(&c.path).unwrap(), b"<p>x <del>y</del> <Tab></p>\n");
 }
 
-/// Three blocks shaped like classes, two blank lines apart. In the order Alpha, Beta, Gamma
-/// they are on lines 1-40, 43-72 and 75-124. Moving one makes a diff too long to print in full.
-fn classes(order: [&str; 3]) -> String {
-    let class = |name: &str| {
-        let lines = [("Alpha", 40), ("Beta", 30), ("Gamma", 50)].iter().find(|(n, _)| *n == name).unwrap().1;
+/// Blocks shaped like classes, two blank lines apart: a first line, and lines under it.
+fn classes_of(classes: [(&str, usize); 3]) -> String {
+    let class = |(name, lines): (&str, usize)| {
         let body: String = (1..lines).map(|i| format!("    {name}_{i} = {i}\n")).collect();
         format!("class {name}:\n{body}")
     };
-    order.map(class).join("\n\n")
+    classes.map(class).join("\n\n")
+}
+
+/// Three classes of 40, 30 and 50 lines. In the order Alpha, Beta, Gamma they are on lines
+/// 1-40, 43-72 and 75-124. Moving one makes a diff too long to print in full.
+fn classes(order: [&str; 3]) -> String {
+    classes_of(order.map(|name| (name, [40, 30, 50][IN_ORDER.iter().position(|n| *n == name).unwrap()])))
+}
+
+/// Three classes of 5, 5 and 8 lines, on lines 1-5, 8-12 and 15-22. Moving one makes a diff
+/// short enough to print in full.
+fn small(order: [&str; 3]) -> String {
+    classes_of(order.map(|name| (name, [5, 5, 8][IN_ORDER.iter().position(|n| *n == name).unwrap()])))
 }
 
 const IN_ORDER: [&str; 3] = ["Alpha", "Beta", "Gamma"];
@@ -344,4 +354,71 @@ fn bad_diff_option_is_a_usage_error() {
     let o = Command::new(env!("CARGO_BIN_EXE_neovain")).args(["f.py", "dd", "--diff"]).output().unwrap();
     assert_eq!(o.status.code(), Some(2));
     assert!(stderr(&o).contains("--diff needs a value"), "{}", stderr(&o));
+}
+
+#[test]
+fn warnings_follow_a_diff_printed_in_full() {
+    if !have_nvim() {
+        return;
+    }
+    let is_diff = |text: &str| text.starts_with("--- ") && text.lines().skip(2).all(|l| l.starts_with(['-', '+', ' ', '@']));
+
+    // The range takes the blank lines below the block, not the ones above it.
+    let c = Case::new(small(IN_ORDER).as_bytes());
+    let out = stdout(&c.run(&["@^class Beta", r":.,/^\S/-1m$"]));
+    let (diff, warnings) = out.split_once("\n\n").expect("an empty line after the diff");
+    assert!(is_diff(diff) && diff.contains("\n+class Beta:"), "{out}");
+    let expected = "WARNING: file ends with 3 newlines, was 1 (2 blank lines at the end)\n\
+        WARNING: no blank line between 15 and 16, was 2\n";
+    assert_eq!(warnings, expected, "{out}");
+
+    // With the blank lines above the block there is the diff and nothing else, as in 0.1.0.
+    let c = Case::new(small(IN_ORDER).as_bytes());
+    let out = stdout(&c.run(&["@^class Beta", r":-2,/^\S/-3m$"]));
+    assert!(is_diff(&out) && out.contains("\n+class Beta:"), "{out}");
+    assert_eq!(c.text(), small(["Alpha", "Gamma", "Beta"]));
+
+    // A long diff that was asked for in full has them too. The note of a dry run comes last.
+    let c = Case::new(classes(IN_ORDER).as_bytes());
+    let out = stdout(&c.run(&["--diff", "full", "--dry-run", "@^class Beta", r":.,/^\S/-1m$"]));
+    let expected = "\n\nWARNING: file ends with 3 newlines, was 1 (2 blank lines at the end)\n\
+        WARNING: no blank line between 92 and 93, was 2\n(dry run, not written)\n";
+    assert!(out.starts_with("--- ") && out.ends_with(expected), "{out}");
+}
+
+#[test]
+fn the_context_asked_for_does_not_choose_what_is_printed() {
+    if !have_nvim() {
+        return;
+    }
+    let lines: String = (1..=200).map(|i| format!("line {i}\n")).collect();
+    let c = Case::new(lines.as_bytes());
+    let o = c.run(&["-C", "40", "@^line 100$", ":s/100/hundred/"]);
+    assert!(o.status.success(), "{}", stderr(&o));
+    let out = stdout(&o);
+    assert!(out.contains("\n@@ -60,81 +60,81 @@\n line 60\n") && out.ends_with("\n line 140\n"), "{out}");
+    assert!(out.contains("\n-line 100\n+line hundred\n") && !out.contains("summary"), "{out}");
+    assert_eq!(out.lines().count(), 85, "{out}");
+}
+
+#[test]
+fn changes_that_a_diff_does_not_show_are_in_the_summary() {
+    if !have_nvim() {
+        return;
+    }
+    let lines: String = (1..=100).map(|i| format!("line {i}\r\n")).collect();
+    let c = Case::new(lines.as_bytes());
+    let o = c.run(&[":set ff=unix"]);
+    assert!(o.status.success(), "{}", stderr(&o));
+    let out = stdout(&o);
+    assert!(out.contains("+100 -100 lines in 1 hunk; 100 -> 100 lines\n"), "{out}");
+    assert!(out.ends_with("in the new file.\nline endings: CRLF -> LF on 100 lines\n"), "{out}");
+    assert_eq!(c.text(), lines.replace("\r\n", "\n"));
+
+    let lines: String = (1..=100).map(|i| format!("line {i}\n   \n")).collect();
+    let c = Case::new(lines.as_bytes());
+    let o = c.run(&[r":%s/^\s\+$//"]);
+    assert!(o.status.success(), "{}", stderr(&o));
+    let out = stdout(&o);
+    assert!(out.ends_with("in the new file.\nwhitespace-only lines changed: 100, from +2\n"), "{out}");
 }
