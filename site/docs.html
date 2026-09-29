@@ -149,11 +149,14 @@
           </button>
         </div>
 <pre class="term" id="agent-instructions">To edit files, run `neovain FILE STEP...` (see `neovain --help`).
+- Plan the whole change, then send every step in one call. If any step fails, nothing is written.
 - Start each edit with a content anchor: '@^def name' (must match exactly one line).
-- Prefer ex commands for structural or bulk edits: :%s, :g/pat/d, :m (move), :t (copy), :&gt;
+- Use ex commands for structural or bulk edits: :%s, :g/pat/d, :m (move), :t (copy), :&gt;
+- A range can end at a pattern: ':.,/^class Next/-1d' deletes up to the line before it.
+- When you move or delete a block, take its blank lines with it, then check both seams.
 - Insert literal text with :a / :i / :c, ending with a line containing only "."
-- Chain every step of a change into one call; if any step fails, nothing is written.
-- Always read the printed diff. A wrong edit that is still valid vim does not fail.</pre>
+- Preview with --dry-run, then send the same command without it.
+- Check the result. A wrong edit that is still valid vim does not fail.</pre>
       </div>
       <p>Where it helps most: moving, deleting, re-indenting and reordering large blocks, and changes that repeat across a file. For a small local change, exact string replacement is just as good. See the <a href="/#benchmarks">benchmarks</a>.</p>
 

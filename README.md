@@ -66,13 +66,22 @@ cursor was on line 1; file unchanged
 
 ## Using it well (for agents)
 
-1. Read first (`rg -n`, `cat -n`) so you know the text you're anchoring on.
-2. Start each edit with a content anchor (`@^def foo`), not a line number or relative motion.
-3. Prefer ex commands for bulk or structural work: `:%s/\<old\>/new/g`, `:g/# DEBUG$/d`,
-   `:m`, `:t`.
-4. **Read the diff.** Motions like `d}`, `3j` and `O` vs `o` are easy to get subtly wrong,
-   and a wrong edit that is still valid vim does not fail.
-5. Use `--dry-run` when unsure.
+1. **Read first** (`rg -n`, `cat -n`) so you know the text you're anchoring on.
+2. **Plan the whole change, then send it as one call.** Steps run in order on the same buffer,
+   so a later anchor sees what earlier steps did. Ten steps in one call cost one round trip;
+   ten calls cost ten. A long chain is safe: if any step fails, nothing is written.
+3. **Anchor by content** (`@^def foo`), not by line number. Line numbers shift as soon as an
+   earlier step adds or removes a line.
+4. **Use ex commands for structural and bulk work.** A range can end at a pattern:
+   `:.,/^class Next/-1d` deletes from the cursor line to the line before `class Next`.
+   `:m` moves a range, `:t` copies it, `>` indents it, `:%s` and `:g` change every match.
+5. **Mind the seams.** When you delete or move a block, take its blank lines with it, then
+   check the blank lines where it left and where it landed.
+6. **Preview, then run.** Add `--dry-run` to see the diff, then send the same command without it.
+7. **Check the result.** A wrong edit that is still valid vim does not fail. Read the diff, and
+   after a large change confirm the structure, for example with `rg -n '^(class|def) '`.
+8. **Quote each step in single quotes.** Backslashes inside single quotes reach neovain as
+   written, so write `\<word\>` once, not doubled.
 
 ## Inserting literal text
 
