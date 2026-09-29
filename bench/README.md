@@ -4,7 +4,7 @@ Does editing through Vim commands (neovain) beat an agent's own editing tool? Th
 measures it with real, headless sessions in Claude Code and Codex CLI.
 
 <!-- generated:summary -->
-250 runs in 11 batches. 3 runs broke the rules and are left out of the tables.
+288 runs in 11 batches. 3 runs broke the rules and are left out of the tables.
 <!-- /generated:summary -->
 
 The tables in this file are generated from [`results.jsonl`](results.jsonl) by
@@ -148,8 +148,8 @@ CLI; v2 and v3 set it to medium.
 
 ### Codex CLI, medium effort
 
-GPT-6 Astra, Sol and Luna, GPT-5.6 Sol, Terra and Luna, and GPT-5.5. The edit arm is Codex's
-own patch tool.
+GPT-6 Astra, Sol and Luna, GPT-5.6 Sol, Terra and Luna, and GPT-5.5, all at medium effort. The
+edit arm is Codex's own patch tool. The neovain arm ran under guidance v2 and again under v3.
 
 <!-- generated:codex -->
 **Large structural edits**
@@ -158,18 +158,25 @@ own patch tool.
 |---|---|---|---|---|---|---|---|
 | GPT-6 Astra | Patch tool |  | 3/3 | 3/3 | 923 | 7.7 | 43s |
 | GPT-6 Astra | neovain | v2 | 3/3 | 3/3 | 1,073 | 10.7 | 52s |
+| GPT-6 Astra | neovain | v3 | 3/3 | 3/3 | 772 | 10.0 | 56s |
 | GPT-6 Sol | Patch tool |  | 3/3 | 3/3 | 3,372 | 13.3 | 85s |
 | GPT-6 Sol | neovain | v2 | 3/3 | 3/3 | 3,945 | 22.3 | 110s |
+| GPT-6 Sol | neovain | v3 | 2/3 | 2/3 | 3,814 | 19.7 | 144s |
 | GPT-6 Luna | Patch tool |  | 0/3 | 0/3 | 3,095 | 7.3 | 91s |
 | GPT-6 Luna | neovain | v2 | 0/3 | 2/3 | 4,452 | 15.0 | 148s |
+| GPT-6 Luna | neovain | v3 | 0/3 | 0/3 | 4,288 | 12.0 | 121s |
 | GPT-5.6 Sol | Patch tool |  | 2/3 | 2/3 | 5,998 | 10.3 | 132s |
 | GPT-5.6 Sol | neovain | v2 | 3/3 | 3/3 | 4,199 | 11.3 | 101s |
+| GPT-5.6 Sol | neovain | v3 | 3/3 | 3/3 | 2,833 | 9.0 | 77s |
 | GPT-5.6 Terra | Patch tool |  | 0/3 | 1/3 | 7,343 | 10.0 | 151s |
 | GPT-5.6 Terra | neovain | v2 | 1/3 | 2/3 | 7,234 | 17.0 | 150s |
+| GPT-5.6 Terra | neovain | v3 | 2/3 | 3/3 | 4,894 | 10.0 | 107s |
 | GPT-5.6 Luna | Patch tool |  | 2/3 | 2/3 | 8,403 | 14.3 | 169s |
 | GPT-5.6 Luna | neovain | v2 | 1/3 | 2/3 | 8,355 | 21.0 | 180s |
+| GPT-5.6 Luna | neovain | v3 | 1/3 | 2/3 | 7,383 | 16.7 | 168s |
 | GPT-5.5 | Patch tool |  | left out: all 3 runs broke the rules |  |  |  |  |
 | GPT-5.5 | neovain | v2 | 1/3 | 3/3 | 5,815 | 25.7 | 126s |
+| GPT-5.5 | neovain | v3 | 3/3 | 3/3 | 4,552 | 18.7 | 95s |
 
 **Small edits**
 
@@ -177,20 +184,25 @@ own patch tool.
 |---|---|---|---|---|---|---|---|
 | GPT-6 Astra | Patch tool |  | 3/3 | 3/3 | 681 | 3.0 | 29s |
 | GPT-6 Astra | neovain | v2 | 3/3 | 3/3 | 798 | 7.3 | 38s |
+| GPT-6 Astra | neovain | v3 | 3/3 | 3/3 | 462 | 6.0 | 39s |
 | GPT-6 Sol | Patch tool |  | 3/3 | 3/3 | 906 | 5.0 | 29s |
 | GPT-6 Sol | neovain | v2 | 3/3 | 3/3 | 2,101 | 7.3 | 57s |
+| GPT-6 Sol | neovain | v3 | 3/3 | 3/3 | 2,077 | 7.7 | 67s |
 | GPT-6 Luna | Patch tool |  | 2/3 | 2/3 | 740 | 3.0 | 23s |
 | GPT-6 Luna | neovain | v2 | 2/3 | 3/3 | 2,120 | 5.3 | 46s |
+| GPT-6 Luna | neovain | v3 | 2/3 | 2/3 | 2,789 | 7.7 | 78s |
 | GPT-5.6 Sol | Patch tool |  | 3/3 | 3/3 | 938 | 3.0 | 25s |
 | GPT-5.6 Sol | neovain | v2 | 3/3 | 3/3 | 2,180 | 4.3 | 50s |
+| GPT-5.6 Sol | neovain | v3 | 3/3 | 3/3 | 2,116 | 4.0 | 63s |
 | GPT-5.6 Terra | Patch tool |  | 3/3 | 3/3 | 929 | 3.0 | 25s |
 | GPT-5.6 Terra | neovain | v2 | 3/3 | 3/3 | 3,651 | 6.0 | 76s |
+| GPT-5.6 Terra | neovain | v3 | 2/3 | 3/3 | 2,175 | 4.3 | 48s |
 | GPT-5.6 Luna | Patch tool |  | 3/3 | 3/3 | 1,136 | 3.7 | 29s |
 | GPT-5.6 Luna | neovain | v2 | 2/3 | 3/3 | 7,856 | 14.0 | 162s |
+| GPT-5.6 Luna | neovain | v3 | 3/3 | 3/3 | 6,025 | 8.0 | 124s |
 | GPT-5.5 | Patch tool |  | 3/3 | 3/3 | 1,172 | 4.0 | 30s |
 | GPT-5.5 | neovain | v2 | 3/3 | 3/3 | 2,572 | 8.3 | 57s |
-
-Still running: neovain with guidance v3, all seven models (4 of 42 runs done). Those rows are added when the batch is complete.
+| GPT-5.5 | neovain | v3 | 3/3 | 3/3 | 2,610 | 8.7 | 57s |
 <!-- /generated:codex -->
 
 With the strongest models the patch tool is as good as neovain or better, and it is clearly
@@ -223,7 +235,7 @@ Counts over every batch in `results.jsonl`.
 | Claude | Edit tool | 30 | 0 | 0 | 0 | 0 |
 | Claude | neovain | 78 | 0 | 2 | 0 |  |
 | Codex | Patch tool | 60 | 3 | 14 | 3 | 7 |
-| Codex | neovain | 82 | 0 | 5 | 18 |  |
+| Codex | neovain | 120 | 0 | 11 | 21 |  |
 <!-- /generated:behavior -->
 
 **Wrong tool.** GPT-5.5, in all three of its large runs in the edit arm, rewrote the file with
@@ -260,9 +272,11 @@ nothing. neovain refused the call and the next one was right.
 3. **Correctness depends on the model more than the tool.** Strong models pass with either.
    Weaker models fail the large task with either, in different ways: unfinished renames and
    damaged code with the patch tool, blank lines with neovain.
-4. **Guidance has to say how.** Telling Codex to "mind the seams" changed nothing, so v3 gives
-   a method for selecting blocks. For Claude, v3 cut output on the large task. Whether it fixes
-   Codex's blank lines is what the `codex-medium-v3` batch will show.
+4. **Guidance has to say how, and it is not a cure.** Telling Codex to "mind the seams" changed
+   nothing, so v3 gives a method for selecting blocks. With it, Codex's blank-line misses on the
+   large task fell from 6 runs to 2 of 21, and exact scores rose from 12 to 14. Runs with wrong
+   code went from 3 to 5, so code-correct scores fell from 18 to 16. At three runs per row that
+   is a small net change. For Claude, v3 cut output on the large task.
 5. **Agents do not read large diffs.** A compact summary of what changed would serve them
    better than a 2,000-line diff.
 
