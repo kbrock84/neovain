@@ -105,35 +105,39 @@
 
       <h2 id="output">Output</h2>
       <p>A diff that changes at most 60 lines, and is at most 80 lines long with two lines of context, is printed in full. For a longer one neovain prints a summary of at most 80 lines, because a 2,000-line diff goes unread. <code>--diff full</code> always prints the diff, <code>--diff summary</code> always prints the summary, and both work with <code>--dry-run</code>. <code>-C</code> sets the context of the diff that is printed. It has no part in the choice between the two.</p>
-      <p>This is the summary of six structural changes to a 2,350-line file, made in one call. Three of its ten blocks are shown:</p>
+      <p>This is the summary of four changes to a 205-line file, made in one call: a rename, a method body wrapped in a <code>with</code> block, a function deleted and a class moved to the end.</p>
       <div class="pane">
-<pre class="term"><span class="meta">work.py: +757 -1237 lines in 60 hunks; 2354 -&gt; 1874 lines
+<pre class="term"><span class="meta">store.py: +96 -110 lines in 4 hunks; 205 -&gt; 191 lines
 summary (--diff full prints the diff). -N: old line. +N: new line. N: line next to the block, in the new file.</span>
-replaced on 155 lines: log_event -&gt; emit_event (none left)
-deleted 398 lines: 961-1358  (class LegacyExporter:)
-<span class="ctx">   921:    return total</span>
-<span class="del">  -961:class LegacyExporter:
-  -962:    """Deprecated: CSV export for the v1 CLI."""</span>
+replaced on 42 lines: fetch_value -&gt; lookup (none left)
+inserted 1 line: 36  (with self.source.lock():)
+<span class="ctx">   35:        """Reserve."""</span>
+<span class="add">  +36:        with self.source.lock():</span>
+<span class="ctx">   37:            if item.get("stock") is None:</span>
+reindented 7 lines: 36-42 -&gt; 37-43, indent +4 spaces  (if item.get("stock") is None:)
+<span class="ctx">   36:        with self.source.lock():</span>
+<span class="add">  +37:            if item.get("stock") is None:</span>
+<span class="add">  +38:                self.lookup(item, "stock")</span>
 <span class="meta">   ...</span>
-<span class="del">  -1357:        self.log_event("parse.score", count=len(tokens))
-  -1358:        return total</span>
-<span class="ctx">   924:class EventStore:</span>
-reindented 120 lines: 1375-1494 -&gt; 939-1058, indent +4 spaces  (total = 0)
-<span class="ctx">   938:        with self._lock:</span>
-<span class="add">  +939:            total = 0
-  +940:            total = sum(x.get("owner", 0) for x in tokens)</span>
+<span class="add">  +42:                self.lookup(item, "weight")</span>
+<span class="add">  +43:            return item</span>
+<span class="ctx">   45:    def release(self, item):</span>
+deleted 13 lines: 145-157  (def old_report(rows):)
+<span class="ctx">   75:    return out</span>
+<span class="del">  -145:def old_report(rows):</span>
+<span class="del">  -146:    """Deprecated: the 2019 report format."""</span>
 <span class="meta">   ...</span>
-<span class="add">  +1057:                events = []
-  +1058:            return total</span>
-<span class="ctx">   1060:    def sample_records(self, files):</span>
-moved 401 lines: 1697-2097 -&gt; 1474-1874  (class ReportBuilder:)
-  down past 211 lines: 1261-1471  (def rank_users(sessions, tokens):)
-<span class="ctx">   1471:    return total</span>
-<span class="add">  +1474:class ReportBuilder:
-  +1475:    """Builds periodic reports from the event store."""</span>
+<span class="del">  -156:        out.append(row.get("supplier"))</span>
+<span class="del">  -157:    return out</span>
+<span class="ctx">   78:class Shipping:</span>
+moved 66 lines: 65-130 -&gt; 126-191  (class Pricing:)
+  down past 58 lines: 66-123  (def load_items(rows):)
+<span class="ctx">   123:    return out</span>
+<span class="add">  +126:class Pricing:</span>
+<span class="add">  +127:    """Prices and discounts."""</span>
 <span class="meta">   ...</span>
-<span class="add">  +1873:            jobs.pop()
-  +1874:        return total</span>
+<span class="add">  +190:            self.lookup(item, "price")</span>
+<span class="add">  +191:        return item</span>
 <span class="ctx">   (end of file)</span></pre>
       </div>
       <table class="defs">
@@ -156,12 +160,11 @@ moved 401 lines: 1697-2097 -&gt; 1474-1874  (class ReportBuilder:)
       <p>The warnings are about the two mistakes that a valid command makes most often:</p>
       <div class="pane">
 <pre class="term"><span class="fail">WARNING: file ends with 3 newlines, was 1 (2 blank lines at the end)
-WARNING: no blank line between 1471 and 1472, was 2
-WARNING: 4 blank lines at 147-150, was 2</span>
-reindented 320 lines: 1375-1694 -&gt; 939-1258, indent +4 spaces  (total = 0)
-<span class="fail">  WARNING: 8 lines are indented less than the block's first line, from +1060</span></pre>
+WARNING: no blank line between 137 and 138, was 2</span>
+reindented 27 lines: 36-62 -&gt; 36-62, indent +4 spaces  (if item.get("stock") is None:)
+<span class="fail">  WARNING: 2 lines are indented less than the block's first line, from +44</span></pre>
       </div>
-      <p>The first three say that blank lines went to the wrong place. Where two blocks were joined, the blank lines between them are compared with the blank lines each block had next to it before. The last one says that a range ran past the end of the block it started in: a method body that is indented together with the methods after it holds lines indented less than its first line, and the first line of the method did not move with them.</p>
+      <p>The first two say that blank lines went to the wrong place. Where two blocks were joined, the blank lines between them are compared with the blank lines each block had next to it before. The last one says that a range ran past the end of the block it started in: a method body that is indented together with the methods after it holds lines indented less than its first line, and the first line of the method did not move with them.</p>
       <p>A warning is given only where the old file shows what the spacing should be. Next to text that is new it does not, so a run of blank lines that changed there is a <code>spacing:</code> line at most. A line on its own that moved is treated the same way.</p>
       <p>Warnings are not kept for the summary. After a diff that is printed in full they follow it, below an empty line. A diff with nothing to warn about is followed by nothing.</p>
       <div class="pane">
@@ -199,11 +202,10 @@ WARNING: no blank line between 7 and 8, was 1</span></pre>
       </table>
       <p>Anchors use Vim's regex syntax and match content, not line numbers, so an edit still lands in the right place after earlier steps have shifted lines around. A steps list typically starts each edit with an anchor:</p>
       <div class="pane">
-<pre class="term"><span class="p">$ </span>neovain app.py \
-    ':%s/\&lt;log_event\&gt;/emit_event/g' \
-    ':g/^def debug_/.,/^\S/-1d' \
-    <span class="anchor">'@^class LegacyExporter'</span> ':.,/^\S/-1d' \
-    <span class="anchor">'@^class ReportBuilder'</span> ':-2,/^\S/-3m$'</pre>
+<pre class="term"><span class="p">$ </span>neovain store.py \
+    ':%s/\&lt;fetch_value\&gt;/lookup/g' \
+    ':g/^def old_/-2,/^\S/-3d' \
+    <span class="anchor">'@^class Pricing'</span> ':-2,/^\S/-3m$'</pre>
       </div>
 
       <h2 id="literal">Literal text</h2>

@@ -61,42 +61,42 @@ is printed in full. For a longer one neovain prints a summary of at most 80 line
 prints the summary, and both work with `--dry-run`. `-C` sets the context of the diff that is
 printed. It has no part in the choice between the two.
 
-This is the summary of six structural changes to a 2,350-line file, made in one call. Four of
-its ten blocks are shown:
+This is the summary of four changes to a 205-line file, made in one call: a rename, a method
+body wrapped in a `with` block, a function deleted and a class moved to the end.
 
 ```console
-$ neovain work.py ':%s/\<log_event\>/emit_event/g' ':g/^def debug_/-2,/^\S/-3d' ...
-work.py: +757 -1237 lines in 60 hunks; 2354 -> 1874 lines
+$ neovain store.py ':%s/\<fetch_value\>/lookup/g' '@^def old_report' ':-2,/^\S/-3d' ...
+store.py: +96 -110 lines in 4 hunks; 205 -> 191 lines
 summary (--diff full prints the diff). -N: old line. +N: new line. N: line next to the block, in the new file.
-replaced on 155 lines: log_event -> emit_event (none left)
-deleted 398 lines: 961-1358  (class LegacyExporter:)
-   921:    return total
-  -961:class LegacyExporter:
-  -962:    """Deprecated: CSV export for the v1 CLI."""
+replaced on 42 lines: fetch_value -> lookup (none left)
+inserted 1 line: 36  (with self.source.lock():)
+   35:        """Reserve."""
+  +36:        with self.source.lock():
+   37:            if item.get("stock") is None:
+reindented 7 lines: 36-42 -> 37-43, indent +4 spaces  (if item.get("stock") is None:)
+   36:        with self.source.lock():
+  +37:            if item.get("stock") is None:
+  +38:                self.lookup(item, "stock")
    ...
-  -1357:        self.log_event("parse.score", count=len(tokens))
-  -1358:        return total
-   924:class EventStore:
-inserted 1 line: 938  (with self._lock:)
-   937:        """Synchronize every pending change to the backend."""
-  +938:        with self._lock:
-   939:            total = 0
-reindented 120 lines: 1375-1494 -> 939-1058, indent +4 spaces  (total = 0)
-   938:        with self._lock:
-  +939:            total = 0
-  +940:            total = sum(x.get("owner", 0) for x in tokens)
+  +42:                self.lookup(item, "weight")
+  +43:            return item
+   45:    def release(self, item):
+deleted 13 lines: 145-157  (def old_report(rows):)
+   75:    return out
+  -145:def old_report(rows):
+  -146:    """Deprecated: the 2019 report format."""
    ...
-  +1057:                events = []
-  +1058:            return total
-   1060:    def sample_records(self, files):
-moved 401 lines: 1697-2097 -> 1474-1874  (class ReportBuilder:)
-  down past 211 lines: 1261-1471  (def rank_users(sessions, tokens):)
-   1471:    return total
-  +1474:class ReportBuilder:
-  +1475:    """Builds periodic reports from the event store."""
+  -156:        out.append(row.get("supplier"))
+  -157:    return out
+   78:class Shipping:
+moved 66 lines: 65-130 -> 126-191  (class Pricing:)
+  down past 58 lines: 66-123  (def load_items(rows):)
+   123:    return out
+  +126:class Pricing:
+  +127:    """Prices and discounts."""
    ...
-  +1873:            jobs.pop()
-  +1874:        return total
+  +190:            self.lookup(item, "price")
+  +191:        return item
    (end of file)
 ```
 
@@ -126,13 +126,12 @@ The warnings are about the two mistakes that a valid command makes most often:
 
 ```
 WARNING: file ends with 3 newlines, was 1 (2 blank lines at the end)
-WARNING: no blank line between 1471 and 1472, was 2
-WARNING: 4 blank lines at 147-150, was 2
-reindented 320 lines: 1375-1694 -> 939-1258, indent +4 spaces  (total = 0)
-  WARNING: 8 lines are indented less than the block's first line, from +1060
+WARNING: no blank line between 137 and 138, was 2
+reindented 27 lines: 36-62 -> 36-62, indent +4 spaces  (if item.get("stock") is None:)
+  WARNING: 2 lines are indented less than the block's first line, from +44
 ```
 
-The first three say that blank lines went to the wrong place. Where two blocks were joined,
+The first two say that blank lines went to the wrong place. Where two blocks were joined,
 the blank lines between them are compared with the blank lines each block had next to it
 before. The last one says that a range ran past the end of the block it started in: a method
 body that is indented together with the methods after it holds lines indented less than its
