@@ -104,7 +104,7 @@
       </div>
 
       <h2 id="output">Output</h2>
-      <p>A diff that changes at most 60 lines, and is at most 80 lines long, is printed in full. For a longer one neovain prints a summary of at most 80 lines, because a 2,000-line diff goes unread. <code>--diff full</code> always prints the diff, <code>--diff summary</code> always prints the summary, and both work with <code>--dry-run</code>.</p>
+      <p>A diff that changes at most 60 lines, and is at most 80 lines long with two lines of context, is printed in full. For a longer one neovain prints a summary of at most 80 lines, because a 2,000-line diff goes unread. <code>--diff full</code> always prints the diff, <code>--diff summary</code> always prints the summary, and both work with <code>--dry-run</code>. <code>-C</code> sets the context of the diff that is printed. It has no part in the choice between the two.</p>
       <p>This is the summary of six structural changes to a 2,350-line file, made in one call. Three of its ten blocks are shown:</p>
       <div class="pane">
 <pre class="term"><span class="meta">work.py: +757 -1237 lines in 60 hunks; 2354 -&gt; 1874 lines
@@ -144,12 +144,15 @@ moved 401 lines: 1697-2097 -&gt; 1474-1874  (class ReportBuilder:)
           <tr><td><code>inserted N lines: C-D</code></td><td>Lines C-D of the new file are new.</td></tr>
           <tr><td><code>changed N lines to M</code></td><td>Lines of the old file were replaced by other text.</td></tr>
           <tr><td><code>reindented N lines</code></td><td>The same text with other leading whitespace, and by how much.</td></tr>
-          <tr><td><code>replaced on N lines</code></td><td>The same token replacement on N lines, and how many lines still contain the old token.</td></tr>
-          <tr><td><code>spacing:</code></td><td>A run of blank lines between two unchanged lines has another length.</td></tr>
-          <tr><td><code>WARNING:</code></td><td>Something that is rarely meant. See below.</td></tr>
+          <tr><td><code>replaced on N lines</code></td><td>The same token replacement on N lines, and how many lines still contain the old token. The five most frequent ones are named and the others counted.</td></tr>
+          <tr><td><code>line endings:</code></td><td>The same lines with other line endings, as in <code>CRLF -&gt; LF on 100 lines</code>.</td></tr>
+          <tr><td><code>whitespace-only lines changed:</code></td><td>Blank lines with other whitespace in them: how many, and the first one.</td></tr>
+          <tr><td><code>trailing whitespace changed</code></td><td>The same text with other whitespace at the end of the line.</td></tr>
+          <tr><td><code>spacing:</code></td><td>A run of blank lines has another length, and that may be meant.</td></tr>
+          <tr><td><code>WARNING:</code></td><td>Something that is very likely wrong. See below.</td></tr>
         </tbody>
       </table>
-      <p>A block starts and ends on a line that is not blank. Its first line follows in parentheses, then an excerpt: the line before the block, its first and last lines, and the line after it. A moved or deleted block that holds more than one unit says so, as in <code>(def load(path):) +2 more at this indent</code> for three functions, and the excerpt shows where the others start. When the summary would get too long, the excerpts get shorter, and then blocks are left out and counted.</p>
+      <p>A block starts and ends on a line that is not blank. Its first line follows in parentheses, then an excerpt: the line before the block, its first and last lines, and the line after it. A moved or deleted block that holds more than one unit says so, as in <code>(def load(path):) +2 more at this indent</code> for three functions, and the excerpt shows where the others start. A moved or re-indented block that holds more or fewer blank lines than before gives both sizes, as in <code>reindented 9 lines to 7</code>. When the summary would get too long, the excerpts get shorter, and then blocks are left out and counted.</p>
       <p>The warnings are about the two mistakes that a valid command makes most often:</p>
       <div class="pane">
 <pre class="term"><span class="fail">WARNING: file ends with 3 newlines, was 1 (2 blank lines at the end)
@@ -158,7 +161,30 @@ WARNING: 4 blank lines at 147-150, was 2</span>
 reindented 320 lines: 1375-1694 -&gt; 939-1258, indent +4 spaces  (total = 0)
 <span class="fail">  WARNING: 8 lines are indented less than the block's first line, from +1060</span></pre>
       </div>
-      <p>The first three say that blank lines went to the wrong place. Where two blocks were joined, the blank lines between them are compared with the blank lines each block had next to it before. The last one says that a range ran past the end of the block it started in: a method body that is indented together with the methods after it holds lines indented less than its first line.</p>
+      <p>The first three say that blank lines went to the wrong place. Where two blocks were joined, the blank lines between them are compared with the blank lines each block had next to it before. The last one says that a range ran past the end of the block it started in: a method body that is indented together with the methods after it holds lines indented less than its first line, and the first line of the method did not move with them.</p>
+      <p>A warning is given only where the old file shows what the spacing should be. Next to text that is new it does not, so a run of blank lines that changed there is a <code>spacing:</code> line at most. A line on its own that moved is treated the same way.</p>
+      <p>Warnings are not kept for the summary. After a diff that is printed in full they follow it, below an empty line. A diff with nothing to warn about is followed by nothing.</p>
+      <div class="pane">
+<pre class="term"><span class="p">$ </span>neovain app.py <span class="anchor">'@^def save'</span> ':.,/^def main/-1m$'
+<span class="meta">--- app.py
++++ app.py
+@@ -3,8 +3,8 @@</span>
+<span class="ctx">     return data
+ </span>
+<span class="add">+def main():
++    d = load("in.txt")
++    save("out.txt", d)</span>
+<span class="ctx"> def save(path, data):
+     open(path, "w").write(data)
+ </span>
+<span class="del">-def main():
+-    d = load("in.txt")
+-    save("out.txt", d)</span>
+
+<span class="fail">WARNING: file ends with 2 newlines, was 1 (1 blank line at the end)
+WARNING: no blank line between 7 and 8, was 1</span></pre>
+      </div>
+      <p>The diff behind a summary and the analysis of the change have two seconds each, and less if the run has taken as long as <code>--timeout</code> by then. If the time runs out, the first line says <code>about +N -M lines, counted roughly</code>, a line that starts with <code>note:</code> says what is missing, and what was found by then is printed. The diff for <code>--diff full</code> takes the time it needs.</p>
       <p>The summary works on lines and knows nothing about the language of the file.</p>
 
       <h2 id="steps">Steps</h2>
@@ -219,8 +245,9 @@ reindented 320 lines: 1375-1694 -&gt; 939-1258, indent +4 spaces  (total = 0)
 - Insert literal text with :a / :i / :c, ending with a line containing only "."
 - Preview with --dry-run, then send the same command without it.
 - Read the output. A wrong edit that is still valid vim does not fail. A long diff is printed as a
-  summary: check each block's line range, size and first line against what you meant, and act
-  on every line that starts with WARNING. --diff full prints every changed line.</pre>
+  summary: check each block's line range, size and first line against what you meant. Act on
+  every line that starts with WARNING, in a summary or below a diff. --diff full prints every
+  changed line.</pre>
       </div>
       <p>Where it helps most: moving, deleting, re-indenting and reordering large blocks, and changes that repeat across a file. For a small local change, exact string replacement is just as good. See the <a href="/#benchmarks">benchmarks</a>.</p>
 
@@ -238,7 +265,7 @@ reindented 320 lines: 1375-1694 -&gt; 939-1258, indent +4 spaces  (total = 0)
           <tr><td><code>--diff MODE</code></td><td>What to print. <code>auto</code> (default): the diff if it is short, a summary of the changes if it is long. <code>full</code>: always the diff. <code>summary</code>: always the summary.</td></tr>
           <tr><td><code>-C N</code></td><td>Lines of context in the diff (default 2).</td></tr>
           <tr><td><code>--sw N</code></td><td>Shiftwidth for <code>&gt;</code> and <code>&lt;</code> in space-indented files (default 4).</td></tr>
-          <tr><td><code>--timeout SECS</code></td><td>Abort if Neovim takes longer (default 10).</td></tr>
+          <tr><td><code>--timeout SECS</code></td><td>Abort if Neovim takes longer (default 10). The diff behind a summary and the analysis of the change stop at it as well.</td></tr>
           <tr><td><code>--</code></td><td>Treat everything after it as steps, for steps that look like flags.</td></tr>
           <tr><td><code>NEOVAIN_NVIM</code></td><td>Path to the <code>nvim</code> binary.</td></tr>
           <tr><td><code>NEOVAIN_EX_ONLY=1</code></td><td>Allow only anchors and ex commands.</td></tr>
