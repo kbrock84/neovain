@@ -38,20 +38,20 @@ python3 run.py --summarize-only
 Claude Opus 5.5 and Sonnet 5.5, 3 runs per cell, 36 runs total, all passing. The numbers are
 means. Raw data: [`results-v1.jsonl`](results-v1.jsonl).
 
-| Model  | Context | Arm        | Pass | API requests | Tool calls | Output tokens | …thinking | Cost   | Wall time |
-|--------|---------|------------|------|--------------|------------|---------------|-----------|--------|-----------|
-| Opus   | small   | edit       | 3/3  | 4.3          | 8.0        | 1,797         | 21        | $0.18  | 18s       |
-| Opus   | small   | neovain    | 3/3  | 4.0          | 4.0        | 1,789         | 1,039     | $0.21  | 24s       |
-| Opus   | small   | neovain-ex | 3/3  | 3.7          | 4.0        | 1,934         | 1,013     | $0.21  | 24s       |
-| Opus   | 250 KB  | edit       | 3/3  | 4.7          | 9.0        | 1,787         | 22        | $1.47  | 26s       |
-| Opus   | 250 KB  | neovain    | 3/3  | 4.7          | 4.7        | 1,569         | 870       | $1.50  | 24s       |
-| Opus   | 250 KB  | neovain-ex | 3/3  | 3.7          | 2.7        | 1,807         | 1,233     | $1.46  | 25s       |
-| Sonnet | small   | edit       | 3/3  | 4.0          | 10.7       | 2,023         | 63        | $0.10  | 16s       |
-| Sonnet | small   | neovain    | 3/3  | 4.0          | 4.7        | 2,006         | 1,312     | $0.11  | 23s       |
-| Sonnet | small   | neovain-ex | 3/3  | 4.3          | 4.7        | 2,089         | 1,279     | $0.12  | 24s       |
-| Sonnet | 250 KB  | edit       | 3/3  | 3.3          | 10.0       | 1,961         | 74        | $0.75  | 18s       |
-| Sonnet | 250 KB  | neovain    | 3/3  | 5.3          | 5.3        | 2,516         | 1,660     | $0.85  | 31s       |
-| Sonnet | 250 KB  | neovain-ex | 3/3  | 3.7          | 4.3        | 2,323         | 1,471     | $0.78  | 29s       |
+| Model      | Context | Arm        | Pass | API requests | Tool calls | Output tokens | …thinking | Cost   | Wall time |
+|------------|---------|------------|------|--------------|------------|---------------|-----------|--------|-----------|
+| Opus 5.5   | small   | edit       | 3/3  | 4.3          | 8.0        | 1,797         | 21        | $0.18  | 18s       |
+| Opus 5.5   | small   | neovain    | 3/3  | 4.0          | 4.0        | 1,789         | 1,039     | $0.21  | 24s       |
+| Opus 5.5   | small   | neovain-ex | 3/3  | 3.7          | 4.0        | 1,934         | 1,013     | $0.21  | 24s       |
+| Opus 5.5   | 250 KB  | edit       | 3/3  | 4.7          | 9.0        | 1,787         | 22        | $1.47  | 26s       |
+| Opus 5.5   | 250 KB  | neovain    | 3/3  | 4.7          | 4.7        | 1,569         | 870       | $1.50  | 24s       |
+| Opus 5.5   | 250 KB  | neovain-ex | 3/3  | 3.7          | 2.7        | 1,807         | 1,233     | $1.46  | 25s       |
+| Sonnet 5.5 | small   | edit       | 3/3  | 4.0          | 10.7       | 2,023         | 63        | $0.10  | 17s       |
+| Sonnet 5.5 | small   | neovain    | 3/3  | 4.0          | 4.7        | 2,006         | 1,312     | $0.11  | 23s       |
+| Sonnet 5.5 | small   | neovain-ex | 3/3  | 4.3          | 4.7        | 2,089         | 1,279     | $0.12  | 24s       |
+| Sonnet 5.5 | 250 KB  | edit       | 3/3  | 3.3          | 10.0       | 1,961         | 74        | $0.75  | 18s       |
+| Sonnet 5.5 | 250 KB  | neovain    | 3/3  | 5.3          | 5.3        | 2,516         | 1,660     | $0.85  | 31s       |
+| Sonnet 5.5 | 250 KB  | neovain-ex | 3/3  | 3.7          | 4.3        | 2,323         | 1,471     | $0.78  | 29s       |
 
 ### Findings
 
@@ -91,12 +91,12 @@ move a 401-line class to the end, swap two 300+ line classes, wrap a 122-line me
 requires an exact match, blank lines included. Claude Opus 5.5 and Sonnet 5.5, 3 runs per cell,
 no preloaded context. Raw data: [`results-large.jsonl`](results-large.jsonl).
 
-| Model  | Arm     | Pass | Output tokens | API requests | Edit calls | Wall time | Cost  |
-|--------|---------|------|---------------|--------------|------------|-----------|-------|
-| Opus   | edit    | 3/3  | 28,903        | 20.3         | 10.0       | 227s      | $1.33 |
-| Opus   | neovain | 3/3  | 3,162         | 9.0          | 2.0        | 43s       | $0.32 |
-| Sonnet | edit    | 3/3  | 31,339        | 14.7         | 8.7        | 159s      | $0.74 |
-| Sonnet | neovain | 2/3  | 3,530         | 7.3          | 1.3        | 38s       | $0.17 |
+| Model      | Arm     | Pass | Output tokens | API requests | Edit calls | Wall time | Cost  |
+|------------|---------|------|---------------|--------------|------------|-----------|-------|
+| Opus 5.5   | edit    | 3/3  | 28,903        | 20.3         | 10.0       | 227s      | $1.33 |
+| Opus 5.5   | neovain | 3/3  | 3,162         | 9.0          | 2.0        | 43s       | $0.32 |
+| Sonnet 5.5 | edit    | 3/3  | 31,339        | 14.7         | 8.7        | 159s      | $0.74 |
+| Sonnet 5.5 | neovain | 2/3  | 3,530         | 7.3          | 1.3        | 38s       | $0.17 |
 
 ### Findings
 

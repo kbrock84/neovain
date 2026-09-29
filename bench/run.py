@@ -156,6 +156,7 @@ def parse_stream(path: Path) -> dict:
         "edit_failed": edit_failed,
         "violations": violations,
         "subtype": result.get("subtype"),
+        "model_id": ",".join(sorted(result.get("modelUsage") or {})),
         "api_error": result.get("result") if result.get("is_error") or not result else None,
     }
 

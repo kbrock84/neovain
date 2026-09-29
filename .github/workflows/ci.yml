@@ -29,3 +29,10 @@ jobs:
           version: ${{ matrix.nvim }}
       - run: nvim --version
       - run: cargo test --release
+
+  site:
+    name: site matches the benchmark data
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 bench/export_site.py --check

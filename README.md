@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="site/logo-dark.png">
+    <img src="site/logo-light.png" alt="neovain" width="300">
+  </picture>
+</p>
+
 # neovain
 
 Transactional vim editing for AI agents. One call applies a sequence of vim keystrokes and
@@ -133,10 +140,13 @@ editing across models, and the results so far.
 
 ## Website
 
-[`site/`](site) is the project website: plain HTML, CSS and JavaScript with no build step, deployed
-on Cloudflare Pages with `site` as the output directory. The benchmark numbers come from
-`site/data/results.json`, which `python3 bench/export_site.py` regenerates from the committed results.
-Every file in it was created and edited with neovain.
+[`site/`](site) is the project website, [neovain.dev](https://neovain.dev): plain HTML, CSS and
+JavaScript, deployed on Cloudflare Pages with `site` as the output directory and no build command.
+
+The benchmark numbers, tables and charts are written into `site/index.html` itself, between
+`<!-- generated:NAME -->` markers, so the page shows them without JavaScript. After the results
+change, run `python3 bench/export_site.py` to regenerate them. It splices the new HTML in with
+neovain. CI runs `python3 bench/export_site.py --check` and fails if the site is out of date.
 
 ## License
 

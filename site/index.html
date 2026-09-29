@@ -3,162 +3,300 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>neovain: vim for AI agents</title>
-  <meta name="description" content="neovain lets coding agents edit files with Vim's commands, a whole change per call. Benchmarks against string-replacement editing.">
-  <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css">
-  <script src="theme.js"></script>
-  <script src="app.js" defer></script>
+  <title>neovain: Vim editing for AI coding agents</title>
+  <meta name="description" content="neovain lets AI coding agents edit files with Vim commands: a whole change per call, applied all or nothing. Open source, with benchmarks against string-replacement editing.">
+  <link rel="canonical" href="https://neovain.dev/">
+  <meta name="theme-color" content="#090e0c">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="neovain">
+  <meta property="og:title" content="neovain: Vim for AI agents">
+  <meta property="og:description" content="Let a coding agent edit a file with Vim commands, a whole change per call. Every step applies, or none do.">
+  <meta property="og:url" content="https://neovain.dev/">
+  <meta property="og:image" content="https://neovain.dev/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="neovain: Vim for AI agents. A bar chart of output tokens on a 2,350-line refactor, neovain against the Edit tool.">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="preload" href="/fonts/ibm-plex-mono-600.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/ibm-plex-sans-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/site.js"></script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "neovain",
+    "description": "A command-line tool that lets AI coding agents edit files with Vim commands, a whole change per call, applied all or nothing.",
+    "url": "https://neovain.dev/",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Linux, macOS, Windows",
+    "license": "https://www.apache.org/licenses/LICENSE-2.0",
+    "downloadUrl": "https://github.com/kbrock84/neovain/releases",
+    "codeRepository": "https://github.com/kbrock84/neovain",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+  }
+  </script>
 </head>
 <body>
+  <a class="skip" href="#main">Skip to content</a>
   <header class="site-header">
     <div class="wrap">
-      <a class="brand" href="./">neovain</a>
+      <a class="brand" href="/">
+        <svg class="mark" width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><rect class="dot" x="6" y="10" width="5" height="5"/><rect class="dot" x="6" y="20" width="5" height="5"/><rect class="block" x="16" y="6" width="10" height="20"/></svg>
+        <span>neovain</span>
+      </a>
       <nav class="site-nav" aria-label="Main">
-        <a href="#benchmarks">Benchmarks</a>
-        <a href="docs.html">Docs</a>
-        <a href="https://github.com/kbrock84/neovain">GitHub</a>
-        <button class="theme-toggle" type="button" aria-label="Toggle dark mode" data-theme-toggle>&#9680;</button>
+        <a href="/#benchmarks">benchmarks</a>
+        <a href="/docs">docs</a>
+        <a href="https://github.com/kbrock84/neovain">github</a>
+        <button class="icon-button outlined" type="button" data-theme-toggle aria-label="Switch between dark and light">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/></svg>
+        </button>
       </nav>
     </div>
   </header>
 
-  <main>
+  <main id="main">
     <section class="hero">
-      <div class="wrap">
-        <p class="eyebrow">Open source &middot; Apache-2.0</p>
-        <h1>Vim for AI agents</h1>
-        <p class="lede">neovain lets a coding agent edit a file with Vim's commands, a whole change per call.
-          Every step applies, or none do.</p>
-        <div class="install"><pre><code>cargo install --git https://github.com/kbrock84/neovain</code></pre></div>
-        <div class="actions">
-          <a class="button primary" href="docs.html">Read the docs</a>
-          <a class="button" href="#benchmarks">See the benchmarks</a>
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow">open source · apache-2.0</p>
+          <h1>Vim for<br>AI agents<span class="cursor" aria-hidden="true"></span></h1>
+          <p class="lede">neovain lets a coding agent edit a file with Vim's commands, a whole change per call. Every step applies, or none do.</p>
+          <div class="install">
+            <div class="command">
+              <span class="prompt" aria-hidden="true">$</span>
+              <code>curl -fsSL https://neovain.dev/install.sh | sh</code>
+              <button class="icon-button" type="button" data-copy="curl -fsSL https://neovain.dev/install.sh | sh" aria-label="Copy the install command">
+                <svg class="idle" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="1.5"/><path d="M5 15V5.5A1.5 1.5 0 0 1 6.5 4H15"/></svg>
+                <svg class="done" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+              </button>
+            </div>
+            <p class="hint">Linux and macOS. It offers to install Neovim if you don't have it. <a href="/docs#install">Windows and other ways to install</a></p>
+          </div>
+          <div class="actions">
+            <a class="button primary" href="/docs">Read the docs</a>
+            <a class="button" href="#benchmarks">See the benchmarks</a>
+          </div>
         </div>
+        <figure class="pane" aria-label="Example: an edit that succeeds, then one that is refused">
+          <figcaption class="pane-head">app.py</figcaption>
+<pre class="term"><span class="p">$ </span>neovain app.py <span class="anchor">'@^def load'</span> 'wciwread_file&lt;Esc&gt;'
+<span class="meta">--- app.py
++++ app.py
+@@ -1,3 +1,3 @@</span>
+<span class="del">-def load(path):</span>
+<span class="add">+def read_file(path):</span>
+<span class="ctx">     data = open(path).read()
+     return data</span>
+
+<span class="p">$ </span>neovain app.py <span class="anchor">'@open('</span> 'dd'
+<span class="fail">FAILED at step 1 "@open(": anchor matched 2
+lines (2,6): make the pattern more specific
+or use @N@</span>
+<span class="ctx">cursor was on line 1; file unchanged</span></pre>
+        </figure>
       </div>
     </section>
 
     <section id="demo">
       <div class="wrap">
         <h2>One command instead of retyping the file</h2>
-        <p class="prose">We gave Claude a 2,350-line Python module and six structural changes: delete a 400-line
-          class, move another to the end, swap two more, wrap a 122-line method body in a lock, rename a method
-          used 191 times, and remove the debug helpers. Same model, same task, two ways to edit. These are the
-          actual calls from one pair of benchmark runs.</p>
-
-        <div class="grid-2 demo">
-          <div class="card">
-            <p class="card-label"><span class="swatch neovain" aria-hidden="true"></span>neovain &middot; <span data-bind="demo.neovain_calls">&ndash;</span> calls</p>
-            <pre class="demo-command"><code data-demo-command>Loading&hellip;</code></pre>
-            <p class="stat-note">The agent previewed the change with <code>--dry-run</code>, then ran it for real
-              (shown). <span data-bind="demo.neovain_chars" data-format="int">&ndash;</span> characters across both calls.</p>
+        <p class="intro">We gave Claude a 2,350-line Python module and six structural changes: delete a 400-line class, move another to the end, swap two more, wrap a 122-line method body in a lock, rename a method used 191 times, and remove the debug helpers. Same model, same task, two ways to edit. These are the actual calls from one pair of benchmark runs.</p>
+        <!-- generated:demo -->
+        <div class="demo-grid">
+          <div class="pane">
+            <div class="pane-head"><span class="pane-title"><i class="swatch neovain"></i>neovain</span><span>2 calls</span></div>
+            <p class="figure-line"><strong>760</strong><span>characters written by the agent</span></p>
+            <ol class="steps">
+              <li><code><span class="p">$ </span>neovain work.py \</code></li>
+              <li><code class="anchor">'@def sync_all(' \</code><span class="why">wrap sync_all in a lock</span></li>
+              <li><code>':.+2,/^        return total$/&gt;' \</code></li>
+              <li><code class="anchor">'@def sync_all(' \</code></li>
+              <li><code>$':+1a\n        with self._lock:\n.' \</code></li>
+              <li><code>':%s/\&lt;log_event\&gt;/emit_event/g' \</code><span class="why">rename, 191 uses</span></li>
+              <li><code>':g/^def debug_/.,/^\S/-1d' \</code><span class="why">delete the debug helpers</span></li>
+              <li><code class="anchor">'@^class LegacyExporter' \</code><span class="why">delete LegacyExporter</span></li>
+              <li><code>':.,/^class EventStore/-1d' \</code></li>
+              <li><code class="anchor">'@^class ReportBuilder' \</code><span class="why">move ReportBuilder to the end</span></li>
+              <li><code>':.-2,/^def rank_users/-3m$' \</code></li>
+              <li><code class="anchor">'@^class CacheLayer' \</code><span class="why">swap the two classes</span></li>
+              <li><code>':mark a' \</code></li>
+              <li><code class="anchor">'@^class SessionManager' \</code></li>
+              <li><code>":.,/^def sample_events/-1m 'a-1"</code></li>
+            </ol>
+            <p class="pane-foot">The agent previewed the change with <code>--dry-run</code>, then ran it for real (shown). Anchors are highlighted.</p>
           </div>
-          <div class="card">
-            <p class="card-label"><span class="swatch edit" aria-hidden="true"></span>Edit tool &middot;
-              <span data-bind="demo.edit_count">&ndash;</span> calls</p>
-            <div class="edit-calls" data-demo-edits></div>
-            <p class="edit-legend"><span><i class="old"></i>text removed</span><span><i class="new"></i>text typed</span></p>
-            <p class="stat-note">String replacement spells out the text it removes and the text it adds, so
-              moving a class means typing all of it twice:
-              <span data-bind="demo.edit_chars" data-format="int">&ndash;</span> characters.</p>
+          <div class="pane">
+            <div class="pane-head"><span class="pane-title"><i class="swatch edit"></i>Edit tool</span><span>8 calls</span></div>
+            <p class="figure-line"><strong>65,379</strong><span>characters written by the agent</span></p>
+            <ol class="calls">
+              <li><span class="n">#1</span><span class="what">replace every log_event( with emit_event(<svg class="span-bar" viewBox="0 0 1000 12" preserveAspectRatio="none" aria-hidden="true"><rect class="find" width="5" height="5"/><rect class="repl" y="7" width="5" height="5"/></svg></span><span class="chars">21</span></li>
+              <li><span class="n">#2</span><span class="what">replace 19 lines with 1<svg class="span-bar" viewBox="0 0 1000 12" preserveAspectRatio="none" aria-hidden="true"><rect class="find" width="39" height="5"/><rect class="repl" y="7" width="5" height="5"/></svg></span><span class="chars">626</span></li>
+              <li><span class="n">#3</span><span class="what">replace 316 lines with 1<svg class="span-bar" viewBox="0 0 1000 12" preserveAspectRatio="none" aria-hidden="true"><rect class="find" width="751" height="5"/><rect class="repl" y="7" width="5" height="5"/></svg></span><span class="chars">11,727</span></li>
+              <li><span class="n">#4</span><span class="what">replace 6 lines with 321<svg class="span-bar" viewBox="0 0 1000 12" preserveAspectRatio="none" aria-hidden="true"><rect class="find" width="11" height="5"/><rect class="repl" y="7" width="760" height="5"/></svg></span><span class="chars">12,021</span></li>
+              <li><span class="n">#5</span><span class="what">replace 420 lines with 1<svg class="span-bar" viewBox="0 0 1000 12" preserveAspectRatio="none" aria-hidden="true"><rect class="find" width="1000" height="5"/><rect class="repl" y="7" width="5" height="5"/></svg></span><span class="chars">15,612</span></li>
+              <li><span class="n">#6</span><span class="what">replace 123 lines with 124<svg class="span-bar" viewBox="0 0 1000 12" preserveAspectRatio="none" aria-hidden="true"><rect class="find" width="330" height="5"/><rect class="repl" y="7" width="362" height="5"/></svg></span><span class="chars">10,785</span></li>
+              <li><span class="n">#7</span><span class="what">replace 260 lines with 3<svg class="span-bar" viewBox="0 0 1000 12" preserveAspectRatio="none" aria-hidden="true"><rect class="find" width="507" height="5"/><rect class="repl" y="7" width="5" height="5"/></svg></span><span class="chars">7,988</span></li>
+              <li><span class="n">#8</span><span class="what">replace 4 lines with 217<svg class="span-bar" viewBox="0 0 1000 12" preserveAspectRatio="none" aria-hidden="true"><rect class="find" width="5" height="5"/><rect class="repl" y="7" width="420" height="5"/></svg></span><span class="chars">6,599</span></li>
+            </ol>
+            <p class="key" aria-hidden="true"><span><i class="find"></i>text to find</span><span><i class="repl"></i>replacement text</span></p>
+            <p class="pane-foot">String replacement spells out the text it finds and the text it adds, so moving a class means writing all of it twice.</p>
           </div>
         </div>
-
-        <div class="stats">
-          <div class="stat">
-            <p class="stat-label">Output tokens</p>
-            <p class="stat-value"><span data-bind="headline.out_ratio" data-format="ratio">&ndash;</span> fewer</p>
-            <p class="stat-note">Mean of Opus and Sonnet, 3 runs each</p>
-          </div>
-          <div class="stat">
-            <p class="stat-label">Wall time</p>
-            <p class="stat-value"><span data-bind="headline.time_ratio" data-format="ratio">&ndash;</span> faster</p>
-            <p class="stat-note">From prompt to finished file</p>
-          </div>
-          <div class="stat">
-            <p class="stat-label">Cost</p>
-            <p class="stat-value"><span data-bind="headline.cost_ratio" data-format="ratio">&ndash;</span> cheaper</p>
-            <p class="stat-note">API list price per task</p>
-          </div>
-        </div>
+        <dl class="stats">
+          <div><dt>output tokens</dt><dd class="value">9.0× fewer</dd><dd class="sub">Mean of Opus 5.5 and Sonnet 5.5, 3 runs each</dd></div>
+          <div><dt>wall time</dt><dd class="value">4.7× faster</dd><dd class="sub">From prompt to finished file</dd></div>
+          <div><dt>cost</dt><dd class="value">4.3× cheaper</dd><dd class="sub">API list price per task</dd></div>
+        </dl>
+        <!-- /generated:demo -->
       </div>
     </section>
 
     <section id="benchmarks">
       <div class="wrap">
         <h2>Benchmarks</h2>
-        <p class="prose">Every number here comes from real, headless Claude Code sessions. Each session gets a
-          fresh copy of the file and may edit it only one way. An automated checker then verifies every
-          requested change and that nothing else moved. Methodology, raw data and the harness are in the
-          <a href="https://github.com/kbrock84/neovain/tree/main/bench">repository</a>.</p>
+        <p class="intro">Every number here comes from real, headless Claude Code sessions. Each session gets a fresh copy of the file and may edit it only one way. An automated checker then verifies every requested change and that nothing else moved. Methodology, raw data and the harness are in the <a href="https://github.com/kbrock84/neovain/tree/main/bench">repository</a>.</p>
 
-        <h3>Large structural edits</h3>
-        <p class="prose">The six-change refactor above, on the 2,350-line module.</p>
-        <div class="legend" aria-hidden="true">
-          <span><i class="swatch neovain"></i>neovain</span>
-          <span><i class="swatch edit"></i>Edit tool</span>
+        <div class="bench-head">
+          <div>
+            <h3>Large structural edits</h3>
+            <p>The six-change refactor above, on the 2,350-line module. Lower is better.</p>
+          </div>
+          <div class="legend" aria-hidden="true">
+            <span><i class="swatch neovain"></i>neovain</span>
+            <span><i class="swatch edit"></i>Edit tool</span>
+          </div>
         </div>
+        <!-- generated:large -->
         <div class="charts">
-          <div class="chart" data-chart="out_tok" data-format="tokens">
-            <h3>Output tokens</h3><p class="sub">Per task, lower is better</p><div data-plot></div>
+          <div class="pane chart">
+            <div><h4>Output tokens</h4><p class="sub">per task</p></div>
+            <div class="bar-group">
+              <span>Opus 5.5</span>
+              <div class="bar-rows">
+                <div class="bar-row"><svg class="bar neovain" width="6.1%" height="14" role="img"><title>Opus 5.5, neovain: 3,162 output tokens, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>3,162</span></div>
+                <div class="bar-row"><svg class="bar edit" width="55.3%" height="14" role="img"><title>Opus 5.5, Edit tool: 28,903 output tokens, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>28,903</span></div>
+              </div>
+            </div>
+            <div class="bar-group">
+              <span>Sonnet 5.5</span>
+              <div class="bar-rows">
+                <div class="bar-row"><svg class="bar neovain" width="6.8%" height="14" role="img"><title>Sonnet 5.5, neovain: 3,530 output tokens, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>3,530</span></div>
+                <div class="bar-row"><svg class="bar edit" width="60.0%" height="14" role="img"><title>Sonnet 5.5, Edit tool: 31,339 output tokens, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>31,339</span></div>
+              </div>
+            </div>
           </div>
-          <div class="chart" data-chart="wall_s" data-format="seconds">
-            <h3>Wall time</h3><p class="sub">Per task, lower is better</p><div data-plot></div>
+          <div class="pane chart">
+            <div><h4>Wall time</h4><p class="sub">per task, prompt to finished file</p></div>
+            <div class="bar-group">
+              <span>Opus 5.5</span>
+              <div class="bar-rows">
+                <div class="bar-row"><svg class="bar neovain" width="11.3%" height="14" role="img"><title>Opus 5.5, neovain: 43s wall time, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>43s</span></div>
+                <div class="bar-row"><svg class="bar edit" width="60.0%" height="14" role="img"><title>Opus 5.5, Edit tool: 227s wall time, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>227s</span></div>
+              </div>
+            </div>
+            <div class="bar-group">
+              <span>Sonnet 5.5</span>
+              <div class="bar-rows">
+                <div class="bar-row"><svg class="bar neovain" width="10.0%" height="14" role="img"><title>Sonnet 5.5, neovain: 38s wall time, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>38s</span></div>
+                <div class="bar-row"><svg class="bar edit" width="41.9%" height="14" role="img"><title>Sonnet 5.5, Edit tool: 159s wall time, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>159s</span></div>
+              </div>
+            </div>
           </div>
-          <div class="chart" data-chart="cost_usd" data-format="usd">
-            <h3>Cost</h3><p class="sub">Per task at API list price</p><div data-plot></div>
+          <div class="pane chart">
+            <div><h4>Cost</h4><p class="sub">per task at API list price</p></div>
+            <div class="bar-group">
+              <span>Opus 5.5</span>
+              <div class="bar-rows">
+                <div class="bar-row"><svg class="bar neovain" width="14.6%" height="14" role="img"><title>Opus 5.5, neovain: $0.32 cost, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>$0.32</span></div>
+                <div class="bar-row"><svg class="bar edit" width="60.0%" height="14" role="img"><title>Opus 5.5, Edit tool: $1.33 cost, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>$1.33</span></div>
+              </div>
+            </div>
+            <div class="bar-group">
+              <span>Sonnet 5.5</span>
+              <div class="bar-rows">
+                <div class="bar-row"><svg class="bar neovain" width="7.5%" height="14" role="img"><title>Sonnet 5.5, neovain: $0.17 cost, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>$0.17</span></div>
+                <div class="bar-row"><svg class="bar edit" width="33.4%" height="14" role="img"><title>Sonnet 5.5, Edit tool: $0.74 cost, mean of 3 runs</title><rect width="100%" height="14" rx="2"/></svg><span>$0.74</span></div>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="table-wrap" data-table="large"></div>
-        <p class="prose"><span data-bind="large_fail_note"></span></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th class="text" scope="col">model</th><th class="text" scope="col">arm</th><th scope="col">passed</th><th scope="col">output tokens</th><th scope="col">API requests</th><th scope="col">tool calls</th><th scope="col">wall time</th><th scope="col">cost</th></tr></thead>
+            <tbody>
+              <tr><th class="text" scope="row">Opus 5.5</th><td class="text"><i class="swatch edit"></i>Edit tool</td><td>3/3</td><td>28,903</td><td>20.3</td><td>23.0</td><td>227s</td><td>$1.33</td></tr>
+              <tr><th class="text" scope="row">Opus 5.5</th><td class="text"><i class="swatch neovain"></i>neovain</td><td>3/3</td><td>3,162</td><td>9.0</td><td>9.0</td><td>43s</td><td>$0.32</td></tr>
+              <tr><th class="text" scope="row">Sonnet 5.5</th><td class="text"><i class="swatch edit"></i>Edit tool</td><td>3/3</td><td>31,339</td><td>14.7</td><td>21.0</td><td>159s</td><td>$0.74</td></tr>
+              <tr><th class="text" scope="row">Sonnet 5.5</th><td class="text"><i class="swatch neovain"></i>neovain</td><td class="short">2/3</td><td>3,530</td><td>7.3</td><td>7.7</td><td>38s</td><td>$0.17</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><strong>Correctness:</strong> 5 of 6 neovain runs and 6 of 6 Edit runs passed. The failed neovain run used a line range that ended at the end of a class instead of the end of a method: valid Vim, wrong edit, and the agent never read the diff.</p>
+        <!-- /generated:large -->
 
-        <h3>Small edits: a tie</h3>
-        <p class="prose">On a 70-line file with seven small edits, the two approaches tie: every run passed, and
-          cost was the same. neovain halves the number of tool calls, but the Edit tool issues its calls in
-          parallel, so both need about four model round trips. neovain agents also spend about a thousand
-          extra thinking tokens working out line ranges, which makes them a few seconds slower. A 250 KB
-          preloaded context, simulating a long session, doesn't change the picture.</p>
-        <div class="table-wrap" data-table="small"></div>
+        <div class="small-edits">
+          <h3>Small edits: a tie</h3>
+          <p class="note">On a 70-line file with seven small edits, the two approaches tie: every run passed, and cost was the same. neovain halves the number of tool calls, but the Edit tool issues its calls in parallel, so both need about four model round trips. neovain agents also spend about a thousand extra thinking tokens working out line ranges, which makes them a few seconds slower. A 250 KB preloaded context, simulating a long session, doesn't change the picture.</p>
+        </div>
+        <!-- generated:small -->
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th class="text" scope="col">model</th><th class="text" scope="col">context</th><th class="text" scope="col">arm</th><th scope="col">passed</th><th scope="col">output tokens</th><th scope="col">API requests</th><th scope="col">tool calls</th><th scope="col">wall time</th><th scope="col">cost</th></tr></thead>
+            <tbody>
+              <tr><th class="text" scope="row">Opus 5.5</th><td class="text ctx">none</td><td class="text"><i class="swatch edit"></i>Edit tool</td><td>3/3</td><td>1,797</td><td>4.3</td><td>8.0</td><td>18s</td><td>$0.18</td></tr>
+              <tr><th class="text" scope="row">Opus 5.5</th><td class="text ctx">none</td><td class="text"><i class="swatch neovain"></i>neovain</td><td>3/3</td><td>1,789</td><td>4.0</td><td>4.0</td><td>24s</td><td>$0.21</td></tr>
+              <tr><th class="text" scope="row">Opus 5.5</th><td class="text ctx">none</td><td class="text"><i class="swatch neovain-ex"></i>neovain (ex-only)</td><td>3/3</td><td>1,934</td><td>3.7</td><td>4.0</td><td>24s</td><td>$0.21</td></tr>
+              <tr><th class="text" scope="row">Opus 5.5</th><td class="text ctx">250 KB preload</td><td class="text"><i class="swatch edit"></i>Edit tool</td><td>3/3</td><td>1,787</td><td>4.7</td><td>9.0</td><td>26s</td><td>$1.47</td></tr>
+              <tr><th class="text" scope="row">Opus 5.5</th><td class="text ctx">250 KB preload</td><td class="text"><i class="swatch neovain"></i>neovain</td><td>3/3</td><td>1,569</td><td>4.7</td><td>4.7</td><td>24s</td><td>$1.50</td></tr>
+              <tr><th class="text" scope="row">Opus 5.5</th><td class="text ctx">250 KB preload</td><td class="text"><i class="swatch neovain-ex"></i>neovain (ex-only)</td><td>3/3</td><td>1,807</td><td>3.7</td><td>2.7</td><td>25s</td><td>$1.46</td></tr>
+              <tr><th class="text" scope="row">Sonnet 5.5</th><td class="text ctx">none</td><td class="text"><i class="swatch edit"></i>Edit tool</td><td>3/3</td><td>2,023</td><td>4.0</td><td>10.7</td><td>17s</td><td>$0.10</td></tr>
+              <tr><th class="text" scope="row">Sonnet 5.5</th><td class="text ctx">none</td><td class="text"><i class="swatch neovain"></i>neovain</td><td>3/3</td><td>2,006</td><td>4.0</td><td>4.7</td><td>23s</td><td>$0.11</td></tr>
+              <tr><th class="text" scope="row">Sonnet 5.5</th><td class="text ctx">none</td><td class="text"><i class="swatch neovain-ex"></i>neovain (ex-only)</td><td>3/3</td><td>2,089</td><td>4.3</td><td>4.7</td><td>24s</td><td>$0.12</td></tr>
+              <tr><th class="text" scope="row">Sonnet 5.5</th><td class="text ctx">250 KB preload</td><td class="text"><i class="swatch edit"></i>Edit tool</td><td>3/3</td><td>1,961</td><td>3.3</td><td>10.0</td><td>18s</td><td>$0.75</td></tr>
+              <tr><th class="text" scope="row">Sonnet 5.5</th><td class="text ctx">250 KB preload</td><td class="text"><i class="swatch neovain"></i>neovain</td><td>3/3</td><td>2,516</td><td>5.3</td><td>5.3</td><td>31s</td><td>$0.85</td></tr>
+              <tr><th class="text" scope="row">Sonnet 5.5</th><td class="text ctx">250 KB preload</td><td class="text"><i class="swatch neovain-ex"></i>neovain (ex-only)</td><td>3/3</td><td>2,323</td><td>3.7</td><td>4.3</td><td>29s</td><td>$0.78</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- /generated:small -->
       </div>
     </section>
 
     <section id="lessons">
       <div class="wrap">
         <h2>What we learned</h2>
-        <div class="grid-2">
-          <div class="card">
+        <div class="lessons">
+          <div class="for">
             <h3>Reach for neovain when</h3>
-            <ul class="checks">
-              <li>A change moves, deletes or re-indents large blocks. The Edit tool retypes them; Vim's
-                <code>:m</code>, <code>:d</code> and <code>&gt;</code> don't.</li>
-              <li>The same change repeats across a file: <code>:%s</code> and <code>:g</code> do it in one step.</li>
-              <li>You want all-or-nothing edits. A failed step leaves the file untouched, and agents recover
-                on the next call.</li>
+            <ul>
+              <li><span>A change moves, deletes or re-indents large blocks. The Edit tool retypes them; Vim's <code>:m</code>, <code>:d</code> and <code>&gt;</code> don't.</span></li>
+              <li><span>The same change repeats across a file: <code>:%s</code> and <code>:g</code> do it in one step.</span></li>
+              <li><span>You want all-or-nothing edits. A failed step leaves the file untouched, and agents recover on the next call.</span></li>
             </ul>
           </div>
-          <div class="card">
+          <div class="against">
             <h3>Stick with string replacement when</h3>
-            <ul class="checks neutral">
-              <li>The change is small and local. Writing the new text directly is the reasoning; with Vim, the
-                agent has to work out the keystrokes too.</li>
-              <li>The model is small. In an early pilot, Haiku needed about three times as long with neovain
-                and failed one run in three.</li>
-              <li>Nobody will read the diff. Range arithmetic can go wrong and still be valid Vim; that is how
-                the one failed large run happened.</li>
+            <ul>
+              <li><span>The change is small and local. Writing the new text directly is the reasoning; with Vim, the agent has to work out the keystrokes too.</span></li>
+              <li><span>The model is small. In an early pilot, Claude Haiku 4.5 needed about three times as long with neovain and failed one run in three.</span></li>
+              <li><span>Nobody will read the diff. Range arithmetic can go wrong and still be valid Vim; that is how the one failed large run happened.</span></li>
             </ul>
           </div>
         </div>
-        <p class="prose">Tool calls are not round trips. Current models send independent edits as parallel tool
-          calls, so cutting the number of calls saves little. What does cost time and money is output: every
-          token the model writes. neovain wins where it lets the agent say less.</p>
+        <p class="closing">Tool calls are not round trips. Current models send independent edits as parallel tool calls, so cutting the number of calls saves little. What does cost time and money is output: every token the model writes. <strong>neovain wins where it lets the agent say less.</strong></p>
       </div>
     </section>
   </main>
 
   <footer class="site-footer">
-    <div class="wrap">neovain is open source under the
-      <a href="https://github.com/kbrock84/neovain/blob/main/LICENSE">Apache License 2.0</a>.
-      Every file on this site was created and edited with neovain.</div>
+    <div class="wrap">
+      <span>Open source under the <a href="https://github.com/kbrock84/neovain/blob/main/LICENSE">Apache License 2.0</a></span>
+      <span>The pages of this site were written with neovain</span>
+    </div>
   </footer>
 </body>
 </html>
