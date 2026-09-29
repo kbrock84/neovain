@@ -112,8 +112,10 @@ moved 401 lines: 1697-2097 -> 1474-1874  (class ReportBuilder:)
 
 A block starts and ends on a line that is not blank. Its first line follows in parentheses,
 then an excerpt: the line before the block, its first and last lines, and the line after it.
-When the summary would get too long, the excerpts get shorter, and then blocks are left out
-and counted.
+A moved or deleted block that holds more than one unit says so, as in
+`(def load(path):) +2 more at this indent` for three functions, and the excerpt shows where
+the others start. When the summary would get too long, the excerpts get shorter, and then
+blocks are left out and counted.
 
 The warnings are about the two mistakes that a valid command makes most often:
 

@@ -81,9 +81,10 @@ pub struct Block<'a> {
     pub outdented: Option<(usize, usize)>,
     /// For a block that moved: true if it went down, and the lines it passed, which stayed.
     pub passed: Option<(bool, Span)>,
-    /// For a moved or deleted block with a body, lines indented more than its first line: the
-    /// other lines indented as much as the first. A block of three functions has two.
-    pub peers: usize,
+    /// For a moved or deleted block: the lines where its other units start. Such a line is
+    /// indented as much as the first line and follows a blank line. A block of three functions
+    /// has two. A block without a body, lines indented more than its first, has none.
+    pub heads: Vec<usize>,
 }
 
 /// One token replaced by another on many lines.
@@ -583,10 +584,14 @@ fn block<'a>(kind: Kind, old: Option<&[Row]>, new: Option<&[Row]>, after: usize)
         Kind::Inserted | Kind::Changed => None,
         _ => new.or(old),
     };
-    let peers = whole.filter(|rows| kind != Kind::Reindented && rows.iter().any(|r| r.width > rows[0].width));
-    let peers = peers.map_or(0, |rows| rows[1..].iter().filter(|r| r.width == rows[0].width).count());
-    let (old, new, outdented) = (old.map(span), new.map(span), whole.and_then(outdented));
-    Block { kind, old, new, indent: Indent::Same, after, outdented, passed: None, peers }
+    // Only a block with a body has units: rows indented more than its first row.
+    let units = whole.filter(|rows| kind != Kind::Reindented && rows.iter().any(|r| r.width > rows[0].width));
+    let starts = |rows: &[Row]| {
+        let head = |pair: &&[Row]| pair[1].width == rows[0].width && pair[1].no - pair[0].no > 1;
+        rows.windows(2).filter(head).map(|pair| pair[1].no).collect()
+    };
+    let (heads, outdented) = (units.map_or(Vec::new(), starts), whole.and_then(outdented));
+    Block { kind, old: old.map(span), new: new.map(span), indent: Indent::Same, after, outdented, passed: None, heads }
 }
 
 /// The blocks, in the order of the new file.
@@ -780,15 +785,15 @@ fn label(text: &[&str], span: Span, peers: usize) -> String {
 /// block passed, and a warning if the block holds lines indented less than its first one.
 fn headlines(a: &Analysis, b: &Block) -> Vec<String> {
     let first = match (b.kind, b.old, b.new) {
-        (Kind::Deleted, Some(o), _) => format!("deleted {}: {}{}", lines(o), range(o), label(&a.old, o, b.peers)),
-        (Kind::Inserted, _, Some(n)) => format!("inserted {}: {}{}", lines(n), range(n), label(&a.new, n, b.peers)),
+        (Kind::Deleted, Some(o), _) => format!("deleted {}: {}{}", lines(o), range(o), label(&a.old, o, b.heads.len())),
+        (Kind::Inserted, _, Some(n)) => format!("inserted {}: {}{}", lines(n), range(n), label(&a.new, n, b.heads.len())),
         (Kind::Changed, Some(o), Some(n)) => {
             let to = if o.1 - o.0 == n.1 - n.0 { String::new() } else { format!(" to {}", n.1 - n.0 + 1) };
-            format!("changed {}{to}: {} -> {}{}", lines(o), range(o), range(n), label(&a.new, n, b.peers))
+            format!("changed {}{to}: {} -> {}{}", lines(o), range(o), range(n), label(&a.new, n, b.heads.len()))
         }
         (_, Some(o), Some(n)) => {
             let (verb, indent) = (if b.kind == Kind::Moved { "moved" } else { "reindented" }, indent_text(b.indent));
-            format!("{verb} {}: {} -> {}{indent}{}", lines(n), range(o), range(n), label(&a.new, n, b.peers))
+            format!("{verb} {}: {} -> {}{indent}{}", lines(n), range(o), range(n), label(&a.new, n, b.heads.len()))
         }
         _ => String::new(),
     };
@@ -835,19 +840,21 @@ const LEVELS: [Level; 5] = [
 ];
 
 /// The lines of a block to show: its first and last lines, and a few lines that show what
-/// the block holds. Those are the lines indented less than the first line or, with `peers`,
-/// as much as the first line.
-fn shown(text: &[&str], (first, last): Span, level: &Level, peers: bool) -> Vec<usize> {
+/// the block holds. Those are the lines indented less than the first line, if there are any,
+/// and else the lines where the other units of the block start.
+fn shown(text: &[&str], (first, last): Span, level: &Level, heads: &[usize]) -> Vec<usize> {
     if last - first < 2 * level.edge + 1 {
         return (first..=last).collect();
     }
     let mut picks: Vec<usize> = (first..first + level.edge).chain(last + 1 - level.edge..=last).collect();
     let inner = || (first + 1..=last).filter(|&no| !text[no - 1].trim().is_empty());
-    let least = inner().map(|no| width(text[no - 1])).min().unwrap_or(0).min(width(text[first - 1]));
-    if least < width(text[first - 1]) || peers {
-        let marks = inner().filter(|&no| width(text[no - 1]) == least && !picks.contains(&no)).take(level.marks);
-        picks.extend(marks.collect::<Vec<_>>());
-    }
+    let least = inner().map(|no| width(text[no - 1])).min().unwrap_or(0);
+    let marks: Vec<usize> = match least < width(text[first - 1]) {
+        true => inner().filter(|&no| width(text[no - 1]) == least).collect(),
+        false => heads.to_vec(),
+    };
+    let marks: Vec<usize> = marks.into_iter().filter(|no| !picks.contains(no)).take(level.marks).collect();
+    picks.extend(marks);
     picks.sort();
     picks
 }
@@ -868,9 +875,9 @@ fn excerpt(a: &Analysis, b: &Block, level: &Level) -> Vec<String> {
         let same = old.chars().zip(new.chars()).take_while(|(x, y)| x == y).count();
         if same + 20 > MAX_WIDTH { same - 20 } else { 0 }
     };
-    let mut side = |text: &[&str], sign: char, span: Span, peers: bool| {
+    let mut side = |text: &[&str], sign: char, span: Span| {
         let mut last = span.0;
-        for no in shown(text, span, level, peers) {
+        for no in shown(text, span, level, &b.heads) {
             if no > last + 1 {
                 out.push("   ...".to_string());
             }
@@ -883,10 +890,10 @@ fn excerpt(a: &Analysis, b: &Block, level: &Level) -> Vec<String> {
         }
     };
     if let (Some(span), true) = (b.old, b.new.is_none() || b.kind == Kind::Changed) {
-        side(&a.old, '-', span, b.kind == Kind::Deleted);
+        side(&a.old, '-', span);
     }
     if let Some(span) = b.new {
-        side(&a.new, '+', span, b.kind == Kind::Moved);
+        side(&a.new, '+', span);
     }
     if level.context {
         let line = |no: usize| cut(&format!("   {no}:{}", a.new[no - 1]), MAX_WIDTH);
