@@ -1,0 +1,84 @@
+name: Installers
+
+# Runs install.sh and install.ps1 against the latest published release, then makes a real edit
+# with the installed binary.
+on:
+  pull_request:
+    paths: ["install.sh", "install.ps1", ".github/workflows/installers.yml"]
+  push:
+    branches: [main]
+    paths: ["install.sh", "install.ps1", ".github/workflows/installers.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unix:
+    name: install.sh (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install neovain and Neovim into an empty directory
+        env:
+          NEOVAIN_INSTALL_NVIM: "yes"
+          NEOVAIN_INSTALL_DIR: ${{ runner.temp }}/bin
+          NEOVAIN_NVIM_DIR: ${{ runner.temp }}/opt
+        run: |
+          # Hide any Neovim the runner already has, so the install path is what gets tested.
+          hidden="$(command -v nvim || true)"
+          if [ -n "$hidden" ]; then sudo mv "$hidden" "$hidden.hidden"; fi
+          sh install.sh
+      - name: Edit a file
+        run: |
+          export PATH="${{ runner.temp }}/bin:$PATH"
+          neovain --version
+          printf 'alpha\nbeta\n' > t.txt
+          neovain t.txt '@^beta' 'ciwgamma<Esc>'
+          grep -qx gamma t.txt
+      - name: Declining leaves Neovim uninstalled
+        env:
+          NEOVAIN_INSTALL_NVIM: "no"
+          NEOVAIN_INSTALL_DIR: ${{ runner.temp }}/bin2
+          NEOVAIN_NVIM_DIR: ${{ runner.temp }}/opt2
+        run: |
+          sh install.sh
+          test -x "${{ runner.temp }}/bin2/neovain"
+          test ! -e "${{ runner.temp }}/bin2/nvim"
+          test ! -e "${{ runner.temp }}/opt2"
+
+  windows:
+    name: install.ps1 (${{ matrix.shell }})
+    strategy:
+      fail-fast: false
+      matrix:
+        shell: [pwsh, powershell]
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install neovain and Neovim into an empty directory
+        env:
+          NEOVAIN_INSTALL_NVIM: "yes"
+          NEOVAIN_ADD_TO_PATH: "no"
+          NEOVAIN_INSTALL_DIR: ${{ runner.temp }}\bin
+          NEOVAIN_NVIM_DIR: ${{ runner.temp }}\opt
+        run: |
+          # Hide any Neovim the runner already has, so the install path is what gets tested.
+          $env:Path = (($env:Path -split ';') | Where-Object { -not (Test-Path (Join-Path $_ 'nvim.exe')) }) -join ';'
+          ./install.ps1
+          if (-not (Test-Path "${{ runner.temp }}\opt\nvim-win64\bin\nvim.exe")) { throw 'Neovim was not installed' }
+      - name: Edit a file
+        run: |
+          $env:Path = "${{ runner.temp }}\bin;${{ runner.temp }}\opt\nvim-win64\bin;$env:Path"
+          neovain --version
+          [IO.File]::WriteAllText("$PWD\t.txt", "alpha`nbeta`n")
+          neovain t.txt '@^beta' 'ciwgamma<Esc>'
+          if ($LASTEXITCODE -ne 0) { throw 'neovain failed' }
+          if (-not (Select-String -Path t.txt -Pattern '^gamma$' -Quiet)) { throw 'the edit did not land' }

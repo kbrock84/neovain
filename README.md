@@ -89,7 +89,30 @@ With `NEOVAIN_EX_ONLY=1`, only `@anchor` and `:ex` steps are accepted. Normal-mo
 
 ## Install
 
-Requires [Neovim](https://neovim.io) 0.9+ on `PATH` (tested with 0.11), or set `NEOVAIN_NVIM`.
+neovain needs [Neovim](https://neovim.io) 0.9 or newer on `PATH`, or `NEOVAIN_NVIM` pointing at one.
+
+On Linux and macOS:
+
+```
+curl -fsSL https://raw.githubusercontent.com/kbrock84/neovain/main/install.sh | sh
+```
+
+On Windows, in PowerShell:
+
+```
+irm https://raw.githubusercontent.com/kbrock84/neovain/main/install.ps1 | iex
+```
+
+The installer downloads the prebuilt binary for your machine from the
+[releases page](https://github.com/kbrock84/neovain/releases) and verifies its checksum. It then
+checks for Neovim 0.9 or newer. If Neovim is missing or too old, it asks before installing the
+latest one. Everything goes into your user directory, so nothing needs sudo or administrator
+rights.
+
+For scripts and agents, answer the questions ahead of time: `NEOVAIN_INSTALL_NVIM=yes` (or `no`),
+and on Windows `NEOVAIN_ADD_TO_PATH=yes` (or `no`). `NEOVAIN_VERSION=v0.1.0` pins a release.
+
+Or build from source with Rust:
 
 ```
 cargo install --git https://github.com/kbrock84/neovain
