@@ -177,22 +177,20 @@ own patch tool.
 |---|---|---|---|---|---|---|---|
 | GPT-6 Astra | Patch tool |  | 3/3 | 3/3 | 681 | 3.0 | 29s |
 | GPT-6 Astra | neovain | v2 | 3/3 | 3/3 | 798 | 7.3 | 38s |
-| GPT-6 Astra | neovain | v3 | 1/1 | 1/1 | 568 | 5.0 | 68s |
 | GPT-6 Sol | Patch tool |  | 3/3 | 3/3 | 906 | 5.0 | 29s |
 | GPT-6 Sol | neovain | v2 | 3/3 | 3/3 | 2,101 | 7.3 | 57s |
-| GPT-6 Sol | neovain | v3 | 1/1 | 1/1 | 1,847 | 7.0 | 77s |
 | GPT-6 Luna | Patch tool |  | 2/3 | 2/3 | 740 | 3.0 | 23s |
 | GPT-6 Luna | neovain | v2 | 2/3 | 3/3 | 2,120 | 5.3 | 46s |
-| GPT-6 Luna | neovain | v3 | 1/1 | 1/1 | 1,933 | 5.0 | 42s |
 | GPT-5.6 Sol | Patch tool |  | 3/3 | 3/3 | 938 | 3.0 | 25s |
 | GPT-5.6 Sol | neovain | v2 | 3/3 | 3/3 | 2,180 | 4.3 | 50s |
-| GPT-5.6 Sol | neovain | v3 | 1/1 | 1/1 | 2,122 | 4.0 | 72s |
 | GPT-5.6 Terra | Patch tool |  | 3/3 | 3/3 | 929 | 3.0 | 25s |
 | GPT-5.6 Terra | neovain | v2 | 3/3 | 3/3 | 3,651 | 6.0 | 76s |
 | GPT-5.6 Luna | Patch tool |  | 3/3 | 3/3 | 1,136 | 3.7 | 29s |
 | GPT-5.6 Luna | neovain | v2 | 2/3 | 3/3 | 7,856 | 14.0 | 162s |
 | GPT-5.5 | Patch tool |  | 3/3 | 3/3 | 1,172 | 4.0 | 30s |
 | GPT-5.5 | neovain | v2 | 3/3 | 3/3 | 2,572 | 8.3 | 57s |
+
+Still running: neovain with guidance v3, all seven models (4 of 42 runs done). Those rows are added when the batch is complete.
 <!-- /generated:codex -->
 
 With the strongest models the patch tool is as good as neovain or better, and it is clearly

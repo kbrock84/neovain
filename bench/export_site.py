@@ -26,7 +26,13 @@ INDEX = SITE / "index.html"
 
 CLAUDE = ["opus", "sonnet"]
 CODEX = ["gpt-6-astra", "gpt-6-sol", "gpt-6-luna", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.5"]
-CODEX_BATCHES = ["codex-gpt6-medium", "codex-5.6-medium", "codex-medium-v3"]
+# Codex batches shown on the site: how many runs each has when complete, and what to call it.
+# A batch appears in the tables only once it is complete, so no row rests on one or two runs.
+CODEX_BATCHES = {
+    "codex-gpt6-medium": (48, "GPT-6 and GPT-5.5 with both tools"),
+    "codex-5.6-medium": (36, "GPT-5.6 with both tools"),
+    "codex-medium-v3": (42, "neovain with guidance v3, all seven models"),
+}
 METRICS = ["out_tok", "think_tok", "tool_calls", "edit_calls", "wall_s"]
 BAR_MAX = 60  # percent of the row, the longest bar in a chart; the rest of the row holds the value
 
@@ -228,8 +234,8 @@ def with_excluded(rows, s, **want):
     return s
 
 
-def codex_cells(rows, task):
-    rows = [r for r in rows if r["batch"] in CODEX_BATCHES and r["task"] == task]
+def codex_cells(rows, task, batches):
+    rows = [r for r in rows if r["batch"] in batches and r["task"] == task]
     cells = []
     for model in CODEX:
         for arm, guidance in (("edit", None), ("neovain", "v2"), ("neovain", "v3")):
@@ -374,16 +380,15 @@ def main():
               + ["  " + line for line in chart("Cost", "per task at API list price", "cost_usd", "cost", f_usd, large)]
               + ["</div>"])
     large_cells = [large[m][a] for m in CLAUDE for a in ("edit", "neovain")]
-    codex_large, codex_small = codex_cells(rows, "large"), codex_cells(rows, "small")
-    have = sorted({r["batch"] for r in rows if r["batch"] in CODEX_BATCHES})
-    waiting = [b for b in CODEX_BATCHES if b not in have]
-    partial = [f"{b} ({sum(r['batch'] == b for r in rows)} runs so far)" for b in have
-               if b == "codex-5.6-medium" and sum(r["batch"] == b for r in rows) < 36]
+    done = {b: sum(r["batch"] == b for r in rows) for b in CODEX_BATCHES}
+    complete = [b for b, (expected, _) in CODEX_BATCHES.items() if done[b] >= expected]
+    pending = [f"{label} ({done[b]} of {expected} runs done)"
+               for b, (expected, label) in CODEX_BATCHES.items() if done[b] < expected]
+    codex_large, codex_small = codex_cells(rows, "large", complete), codex_cells(rows, "small", complete)
     status = ""
-    if waiting or partial:
-        status = ('<p class="note"><strong>Still running:</strong> '
-                  + esc("; ".join(partial + [f"{b} (not started)" for b in waiting]))
-                  + ". This table will grow as those runs finish.</p>")
+    if pending:
+        status = ('<p class="note"><strong>Still running:</strong> ' + esc("; ".join(pending))
+                  + ". Those rows are added when the batch is complete.</p>")
 
     regions = {
         "demo": region("demo", demo_fragment(demo, headline)),
@@ -410,8 +415,8 @@ def main():
                            + md_cells(guidance_cells(rows, "small"), True, guidance=True), 0),
         "codex": region("codex", ["**Large structural edits**", ""] + md_cells(codex_large, False, guidance=True)
                         + ["", "**Small edits**", ""] + md_cells(codex_small, False, guidance=True)
-                        + (["", "Still running: " + "; ".join(partial + [f"{b} (not started)" for b in waiting]) + "."]
-                           if waiting or partial else []), 0),
+                        + (["", "Still running: " + "; ".join(pending) + ". Those rows are added when the "
+                            "batch is complete."] if pending else []), 0),
         "behavior": region("behavior", behavior_md(rows), 0),
     }
     readme_path = BENCH / "README.md"
