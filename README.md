@@ -91,6 +91,18 @@ With `NEOVAIN_EX_ONLY=1`, only `@anchor` and `:ex` steps are accepted. Normal-mo
 
 Requires [Neovim](https://neovim.io) 0.9+ on `PATH` (tested with 0.11), or set `NEOVAIN_NVIM`.
 
+Prebuilt binaries for Linux, macOS and Windows are on the
+[releases page](https://github.com/kbrock84/neovain/releases). On Linux and macOS, this installs
+the latest one to `~/.local/bin` and verifies its checksum:
+
+```
+curl -fsSL https://raw.githubusercontent.com/kbrock84/neovain/main/install.sh | sh
+```
+
+On Windows, download the `.zip` from the releases page and put `neovain.exe` on your `PATH`.
+
+Or build from source with Rust:
+
 ```
 cargo install --git https://github.com/kbrock84/neovain
 ```
