@@ -1,6 +1,6 @@
 [package]
 name = "neovain"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Transactional vim-keystroke editing for AI agents, powered by headless Neovim"
 license = "Apache-2.0"
