@@ -168,7 +168,8 @@ editing across models, and the results so far.
 ## Website
 
 [`site/`](site) is the project website, [neovain.dev](https://neovain.dev): plain HTML, CSS and
-JavaScript, deployed on Cloudflare Pages with `site` as the output directory and no build command.
+JavaScript with no build step. It is served by Cloudflare as static assets. To deploy, run
+`npx wrangler deploy` from the repository root; [`wrangler.jsonc`](wrangler.jsonc) holds the settings.
 
 The benchmark numbers, tables and charts are written into `site/index.html` itself, between
 `<!-- generated:NAME -->` markers, so the page shows them without JavaScript. After the results
