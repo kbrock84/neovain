@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: test (${{ matrix.os }}, nvim ${{ matrix.nvim }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        nvim: [stable]
+        include:
+          # Oldest supported Neovim: `nvim -l` needs 0.9.
+          - os: ubuntu-latest
+            nvim: v0.9.5
+    runs-on: ${{ matrix.os }}
+    env:
+      NEOVAIN_REQUIRE_NVIM: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: ${{ matrix.nvim }}
+      - run: nvim --version
+      - run: cargo test --release

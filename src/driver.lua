@@ -10,6 +10,8 @@ end
 
 -- noautocmd skips filetype detection and ftplugins, which cost ~450ms and are disabled anyway.
 vim.cmd("silent noautocmd edit " .. vim.fn.fnameescape(job.file))
+-- Empty or new files have no line endings to detect; Neovim on Windows would pick CRLF.
+if vim.fn.getfsize(job.file) <= 0 then vim.bo.fileformat = "unix" end
 -- Neutralize everything that makes typed text differ from the literal keys.
 vim.cmd("filetype off | syntax off")
 for opt, val in pairs({ autoindent = false, smartindent = false, cindent = false, indentexpr = "",

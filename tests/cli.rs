@@ -11,6 +11,7 @@ fn have_nvim() -> bool {
     let nvim = std::env::var_os("NEOVAIN_NVIM").unwrap_or_else(|| "nvim".into());
     let ok = Command::new(nvim).arg("--version").output().is_ok();
     if !ok {
+        assert!(std::env::var_os("NEOVAIN_REQUIRE_NVIM").is_none(), "nvim required but not found");
         eprintln!("skipping: nvim not found");
     }
     ok
@@ -193,4 +194,16 @@ fn usage_errors_exit_2() {
     assert_eq!(o.status.code(), Some(2));
     let o = Command::new(env!("CARGO_BIN_EXE_neovain")).arg("only-file").output().unwrap();
     assert_eq!(o.status.code(), Some(2));
+}
+
+#[test]
+fn literal_append_keeps_key_notation_and_empty_files_get_lf() {
+    if !have_nvim() {
+        return;
+    }
+    let c = Case::new(b"");
+    // :0a text is literal: <del> and <Tab> must not become keys.
+    let o = c.run(&[":0a\n<p>x <del>y</del> <Tab></p>\n."]);
+    assert!(o.status.success(), "{}", stderr(&o));
+    assert_eq!(fs::read(&c.path).unwrap(), b"<p>x <del>y</del> <Tab></p>\n");
 }
