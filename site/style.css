@@ -23,6 +23,8 @@
   --neovain: #00b15f;
   --edit: #8b6cf6;
   --edit-dim: #3a2f6e;
+  --nvim: #b98211;
+  --astgrep: #2a86b5;
   --added: #2ff58f;
   --removed: #b7a4fb;
   --button-text: #090e0c;
@@ -46,6 +48,8 @@
   --neovain: #00a35c;
   --edit: #7346e8;
   --edit-dim: #cfc2f7;
+  --nvim: #b57a00;
+  --astgrep: #1f7fb0;
   --added: #00703f;
   --removed: #5a2fd0;
   --button-text: #0c1411;
@@ -137,6 +141,8 @@ figure { margin: 0; }
 .swatch.neovain { background: var(--neovain); }
 .swatch.edit { background: var(--edit); }
 .swatch.neovain-ex { border: 2px solid var(--neovain); }
+.swatch.nvim { background: var(--nvim); }
+.swatch.ast-grep { background: var(--astgrep); }
 
 /* Demo */
 .demo-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-top: 40px; }

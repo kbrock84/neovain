@@ -32,5 +32,11 @@
    "note": "neovain 0.2.0, effort medium. Small task only, for the same reason as claude-0.2.0-small."},
   {"batch": "codex-0.2.0-large", "dir": "~/neovain-bench/codex-v020-clean", "agent": "codex", "guidance": "v4",
    "tool": "0.2.0",
-   "note": "neovain 0.2.0, effort medium, large task, after the README's example was replaced."}
+   "note": "neovain 0.2.0, effort medium, large task, after the README's example was replaced."},
+  {"batch": "claude-tools", "dir": "~/neovain-bench/claude-tools", "agent": "claude", "guidance": "v4",
+   "tool": "0.2.0", "tools": {"nvim": "0.11.3", "ast-grep": "0.45.3"},
+   "note": "Raw Neovim and ast-grep on every task, and every arm on the multi-file task. Effort medium."},
+  {"batch": "codex-tools", "dir": "~/neovain-bench/codex-tools", "agent": "codex", "guidance": "v4",
+   "tool": "0.2.0", "tools": {"nvim": "0.11.3", "ast-grep": "0.45.3"},
+   "note": "The same for the seven Codex models."}
 ]

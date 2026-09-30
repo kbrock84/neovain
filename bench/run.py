@@ -6,15 +6,19 @@
   python3 run.py --summarize-only --out runs
 
 Arms:
-  edit        modify work.py only with Claude Code's Edit tool (exact string replacement)
-  neovain     modify work.py only through the neovain CLI
+  edit        change the files only with the agent's own editing tool (Claude Code's Edit tool,
+              Codex's patch tool)
+  neovain     only through the neovain CLI
   neovain-ex  neovain with NEOVAIN_EX_ONLY=1 (anchors and ex commands only, no normal-mode keys)
+  nvim        only by running Neovim headless (nvim --headless -c ...), with bench/guides/nvim.md
+  ast-grep    only through the ast-grep CLI, with bench/guides/ast-grep.md
 
 --context-kb N preloads N KB of real source code (Neovim's Lua runtime) into the prompt so every
 turn carries a large context, as in a long real session. The prompt is sent on stdin.
 
-Each run gets a fresh copy of tasks/TASK/fixture.py as work.py. Results are appended to <out>/results.jsonl,
-and a per-(model, arm, context) summary table is printed at the end.
+Each run gets a fresh copy of the task: tasks/TASK/fixture.py as work.py, or tasks/TASK/fixture/app
+as app/. Results are appended to <out>/results.jsonl, and a per-(model, arm, context) summary
+table is printed at the end.
 """
 import argparse
 import json
@@ -31,57 +35,96 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 README = HERE.parent / "README.md"
 
-COMMON = """Apply the edits described in TASKS.md (in the current directory) to work.py.
-Reading is unrestricted (Read, Grep, Glob, cat -n, rg). Do not look at any other file except as stated.
-You may check syntax with: python3 -c "import ast;ast.parse(open('work.py').read())"
+GUIDES = {"neovain": README, "neovain-ex": README, "nvim": HERE / "guides" / "nvim.md",
+          "ast-grep": HERE / "guides" / "ast-grep.md"}
+# The tool each arm may change files with, and how a call to it looks in a shell command.
+OWN = {"edit": None, "neovain": "neovain", "neovain-ex": "neovain", "nvim": "nvim", "ast-grep": "ast-grep"}
+
+
+def prompt(arm: str, target: str, binary: str, agent: str) -> str:
+    """The task prompt for one arm. `target` is work.py or app/, what the task's files are called."""
+    single = target == "work.py"
+    files = "work.py" if single else "the Python files under app/"
+    check = ("python3 -c \"import ast;ast.parse(open('work.py').read())\"" if single else
+             "python3 -c \"import ast,glob;[ast.parse(open(f).read()) for f in glob.glob('app/*.py')]\"")
+    reading = "(Read, Grep, Glob, cat -n, rg)" if agent == "claude" else "(cat -n, rg, sed -n)"
+    common = f"""Apply the edits described in TASKS.md (in the current directory) to {files}.
+Reading is unrestricted {reading}. Do not look at any other file except as stated.
+You may check syntax with: {check}
 When done, reply with just DONE."""
+    via = "through Bash" if agent == "claude" else "in the shell"
+    own_tool = "Edit/Write tools" if agent == "claude" else "apply_patch or other file-editing tool"
+    example = "work.py" if single else "app/FILE.py"
+    if arm == "edit":
+        rule = ("You must modify work.py ONLY with the Edit tool (exact string replacement). Do not use Write,\n"
+                "sed, redirection or scripts to change the file." if agent == "claude" else
+                "You must modify work.py ONLY with your built-in file-editing tool (apply_patch). Do not use shell\n"
+                "commands, redirection or scripts to change the file.").replace("work.py", files)
+    elif arm in ("neovain", "neovain-ex"):
+        rule = f"""You must modify {files} ONLY by running the neovain CLI {via}:
+  {binary} {example} STEP...
+Read {README} first to learn it. Do not write {files} any other way
+(no {own_tool}, no sed -i, no redirection, no scripts)."""
+    elif arm == "nvim":
+        rule = f"""You must modify {files} ONLY by running Neovim headless {via}:
+  nvim --clean --headless -n {example} -c 'COMMAND' -c 'COMMAND' -c 'wq'
+Read {GUIDES[arm]} first to learn how it behaves. Do not write {files} any other way
+(no {own_tool}, no sed -i, no redirection, no scripts that write the files)."""
+    elif arm == "ast-grep":
+        rule = f"""You must modify {files} ONLY by running the ast-grep CLI {via}:
+  ast-grep run -l python -p 'PATTERN' -r 'REWRITE' -U {example}
+Read {GUIDES[arm]} first to learn how it behaves. Do not write {files} any other way
+(no {own_tool}, no sed -i, no redirection, no scripts that write the files)."""
+    else:
+        raise SystemExit(f"unknown arm {arm!r}")
+    text = f"{common}\n{rule}"
+    if arm == "neovain-ex":
+        text += ("\nEx-only mode is enabled: only @anchor and :ex steps are accepted. Normal-mode keys and :normal are\n"
+                 "rejected. Insert text with :a, :i or :c.")
+    return text
 
 
-def prompts(binary: str) -> dict:
-    tool = f"""You must modify work.py ONLY by running the neovain CLI through Bash:
-  {binary} work.py STEP...
-Read {README} first to learn it. Do not write work.py any other way
-(no Edit/Write tools, no sed -i, no redirection, no scripts)."""
-    return {
-        "edit": f"""{COMMON}
-You must modify work.py ONLY with the Edit tool (exact string replacement). Do not use Write,
-sed, redirection or scripts to change the file.""",
-        "neovain": f"{COMMON}\n{tool}",
-        "neovain-ex": f"""{COMMON}
-{tool}
-Ex-only mode is enabled: only @anchor and :ex steps are accepted. Normal-mode keys and :normal are
-rejected. Insert new lines with ex commands such as :call append(line('.'), ['line 1', 'line 2'])
-or :s with \\r in the replacement.""",
-    }
-
-
+SHELL_ARMS = (["Bash", "Read", "Grep", "Glob"], ["Edit", "Write", "NotebookEdit", "Agent"])
 TOOLS = {
     "edit": (["Edit", "Bash", "Read", "Grep", "Glob"], ["Write", "NotebookEdit", "Agent"]),
-    "neovain": (["Bash", "Read", "Grep", "Glob"], ["Edit", "Write", "NotebookEdit", "Agent"]),
-    "neovain-ex": (["Bash", "Read", "Grep", "Glob"], ["Edit", "Write", "NotebookEdit", "Agent"]),
+    "neovain": SHELL_ARMS, "neovain-ex": SHELL_ARMS, "nvim": SHELL_ARMS, "ast-grep": SHELL_ARMS,
 }
 
 NEOVAIN_CALL = re.compile(r"""(?:^|[\s;&|('"])(?:\S*/)?neovain(?:\s|$)""")
+NVIM_CALL = re.compile(r"""(?:^|[\s;&|('"])(?:\S*/)?nvim(?:\s|$)""")
+# ast-grep changes files only with -U/--update-all or -i/--interactive; without them it is a search.
+ASTGREP_WRITE = re.compile(r"""(?:^|[\s;&|('"])(?:\S*/)?(?:ast-grep|sg)\s[^|;&]*\s(?:-U|--update-all|-i|--interactive)\b""")
+EDITORS = {"neovain": NEOVAIN_CALL, "nvim": NVIM_CALL, "ast-grep": ASTGREP_WRITE}
+# The task's own files, and the benchmark's files that hold the answers.
+TARGET = r"(?:\S*work\.py|\S*\bapp/\S+)"
+MENTIONS_TARGET = re.compile(r"work\.py|\bapp\b")
+BENCH_FILES = re.compile(r"bench/tasks|/tasks/(?:small|large|multi)/|/expected/")
 # Shell commands that write a file. The first version of this check knew only sed -i, redirects and
 # open(..., "w"), and missed a model that rewrote work.py with Path.write_text and piped patches.
 # A script that only prints a patch is not a write: the agent still has to apply it with its tool.
 SHELL_WRITE = re.compile(
-    r"sed\s+(-[a-zA-Z]*\s+)*-[a-zA-Z]*i"
+    r"sed\s+(-[a-zA-Z]*\s+)*-[a-zA-Z]*i\b(?![^;&|\n]*/dev/null)"
     r"|perl\s+(-[a-zA-Z]*\s+)*-[a-zA-Z]*i"
-    r"|>>?\s*\S*work\.py"
-    r"|\btee\b[^|;]*work\.py"
-    r"|\b(mv|cp|install)\b[^|;]*\s\S*work\.py\s*($|[;&|\"'])"
+    rf"|>>?\s*{TARGET}"
+    rf"|\btee\b[^|;\n]*{TARGET}"
+    rf"|\b(mv|cp|install)\b[^|;&\n]*\s{TARGET}\s*($|[;&|\"'])"
     r"|write_text|writelines|\.write\("
     r"|open\([^)]*['\"][wa]\+?b?['\"]"
     r"|\bapply_patch\s*<|\|\s*apply_patch\b"
     r"|\bpatch\s+(-p\d|-i\b|<)|\bgit\s+apply\b"
-    r"|\b(ed|ex|vim?|nvim)\s+(-\S+\s+)*\S*work\.py"
+    rf"|\b(ed|ex|vim?)\s+(-\S+\s+)*{TARGET}"
     r"|\bawk\b[^|;]*-i\s*inplace"
 )
 
 
+def own_call(arm: str, command: str) -> bool:
+    """Does this shell command call the tool the arm edits with?"""
+    editor = EDITORS.get(OWN[arm])
+    return bool(editor and editor.search(command))
+
+
 def stream_commands(path: Path):
-    """Yield ("shell", command) and ("tool", name) for every action in a Claude or Codex run log."""
+    """Yield ("shell", command), ("tool", name) and ("read", path) for the actions in a run log."""
     for line in path.read_text(errors="replace").splitlines():
         try:
             ev = json.loads(line)
@@ -91,7 +134,7 @@ def stream_commands(path: Path):
         if ev.get("type") == "item.completed" and item.get("type") == "command_execution":
             yield "shell", item.get("command") or ""
         elif ev.get("type") == "item.completed" and item.get("type") == "file_change":
-            if any(Path(c.get("path") or "").name == "work.py" for c in item.get("changes") or []):
+            if any(Path(c.get("path") or "").suffix == ".py" for c in item.get("changes") or []):
                 yield "tool", "apply_patch"
         elif ev.get("type") == "assistant":
             for b in (ev.get("message") or {}).get("content") or []:
@@ -100,6 +143,8 @@ def stream_commands(path: Path):
                         yield "shell", b["input"].get("command", "")
                     elif b["name"] in ("Edit", "Write", "MultiEdit", "NotebookEdit"):
                         yield "tool", b["name"]
+                    elif b["name"] in ("Read", "Grep", "Glob"):
+                        yield "read", " ".join(str(v) for v in b["input"].values())
 
 
 # A neovain call whose output the agent never sees. Only the pipeline the call itself is in
@@ -132,12 +177,7 @@ def own_pipeline(script: str, start: int) -> str:
 
 
 def output_discarded(command: str) -> bool:
-    script = command
-    if re.match(r"^\S*(bash|sh)\s+-l?c\s", command):  # Codex wraps every command in a shell call
-        try:
-            script = shlex.split(command)[2]
-        except (ValueError, IndexError):
-            pass
+    script = unwrap_shell(command)
     call = NEOVAIN_CALL.search(script)
     if not call or "--help" in script:
         return False
@@ -153,25 +193,81 @@ def discarded_calls(path: Path) -> int:
     return sum(1 for kind, text in stream_commands(path) if kind == "shell" and output_discarded(text))
 
 
+def unwrap_shell(command: str) -> str:
+    """The script inside Codex's `/bin/bash -lc "..."`, or the command itself."""
+    if re.match(r"^\S*(bash|sh)\s+-l?c\s", command):
+        try:
+            return shlex.split(command)[2]
+        except (ValueError, IndexError):
+            pass
+    return command
+
+
+def simple_commands(script: str):
+    """The simple commands of a shell script, split at ; newline && || and |, outside quotes."""
+    out, quote, start, i = [], None, 0, 0
+    while i < len(script):
+        ch = script[i]
+        if quote:
+            if ch == "\\" and quote != "'" and i + 1 < len(script):
+                i += 1
+            elif ch == quote:
+                quote = None
+        elif ch in "'\"":
+            quote = ch
+        elif ch in ";\n|" or script.startswith("&&", i):
+            out.append(script[start:i])
+            i += 1 if ch in ";\n" else 2 if script.startswith(("&&", "||"), i) else 1
+            start = i
+            continue
+        i += 1
+    out.append(script[start:])
+    return [c for c in out if c.strip()]
+
+
+def without_own_calls(command: str, arm: str) -> str:
+    """The command with the arm's own editor calls taken out, so text they carry (a whole file in
+    an ast-grep template, say) is not mistaken for a shell write."""
+    editor = EDITORS.get(OWN[arm])
+    if not editor:
+        return command
+    script = unwrap_shell(command)
+    return "\n".join(c for c in simple_commands(script) if not editor.search(c))
+
+
 def scan_violations(path: Path, arm: str) -> list[str]:
     """Every edit made outside the arm's allowed tool, as short descriptions.
 
-    In the edit arm only the agent's own file-editing tool may change work.py, and the shell may
-    only read. In a neovain arm only neovain calls may change it.
+    In the edit arm only the agent's own file-editing tool may change the task's files, and the
+    shell may only read. In the other arms only that arm's tool may change them. Reading the
+    benchmark's own files, where the expected results are, also counts.
     """
     found = []
     for kind, text in stream_commands(path):
         if kind == "tool":
             if arm != "edit":
-                found.append(f"{text} used in a neovain arm")
-        elif NEOVAIN_CALL.search(text):
-            if arm == "edit":
-                found.append("neovain used in the edit arm")
-        elif "work.py" in text or "apply_patch" in text:
-            match = SHELL_WRITE.search(text)
+                found.append(f"{text} used in the {arm} arm")
+            continue
+        if BENCH_FILES.search(text):
+            found.append("read the benchmark's files")
+        if kind == "read":
+            continue
+        for name, editor in EDITORS.items():
+            if name != OWN[arm] and editor.search(text):
+                found.append(f"{name} used in the {arm} arm")
+        rest = without_own_calls(text, arm)
+        if MENTIONS_TARGET.search(rest) or "apply_patch" in rest:
+            match = SHELL_WRITE.search(rest)
             if match:
                 found.append(f"shell write: {match.group(0).strip()[:24]}")
     return found
+
+
+def big_calls(path: Path, arm: str) -> int:
+    """How many of the arm's own editor calls carried 30 lines of text or more: an agent that
+    passes a whole file through its tool instead of describing the change."""
+    return sum(1 for kind, text in stream_commands(path)
+               if kind == "shell" and own_call(arm, text) and unwrap_shell(text).count("\n") >= 30)
 
 
 def preload(kb: int) -> str:
@@ -207,32 +303,47 @@ def code_ok(passed: bool, check: str) -> bool:
     return bool(check) and all(r.startswith("layout differs") or r in LAYOUT_REASONS for r in reasons)
 
 
+def stage(task: str, d: Path):
+    """A fresh copy of the task in d. Returns what the agent edits and what the checker is given."""
+    src = HERE / "tasks" / task
+    shutil.copy(src / "TASKS.md", d / "TASKS.md")
+    if (src / "fixture.py").exists():
+        shutil.copy(src / "fixture.py", d / "work.py")
+        return "work.py", d / "work.py"
+    shutil.copytree(src / "fixture" / "app", d / "app")
+    return "app/", d
+
+
 def run_one(a, task: str, model: str, arm: str, kb: int, rep: int, background: dict) -> dict:
     d = a.out / f"{task}_{model}_{arm}_ctx{kb}_{rep}"
     shutil.rmtree(d, ignore_errors=True)
     d.mkdir(parents=True)
-    shutil.copy(HERE / "tasks" / task / "fixture.py", d / "work.py")
-    shutil.copy(HERE / "tasks" / task / "TASKS.md", d / "TASKS.md")
+    target, to_check = stage(task, d)
     if a.agent == "codex":
         effort = ["-c", f'model_reasoning_effort="{a.effort}"'] if a.effort else []
         cmd = ["codex", "exec", "--json", "--skip-git-repo-check", "--sandbox", "workspace-write", "-m", model,
                *effort, "-"]
-        prompt = background[kb] + codex_prompts(a.bin)[arm]
     else:
         allowed, denied = TOOLS[arm]
         effort = ["--effort", a.effort] if a.effort else []
         cmd = ["claude", "-p", "--model", model, *effort, "--output-format", "stream-json", "--verbose",
                "--allowedTools", *allowed, "--disallowedTools", *denied, "--max-turns", "40"]
-        prompt = background[kb] + prompts(a.bin)[arm]
+    text = background[kb] + prompt(arm, target, a.bin, a.agent)
     env = {**os.environ, "NEOVAIN_EX_ONLY": "1" if arm == "neovain-ex" else "0"}
     t0 = time.monotonic()
+    timed_out, exit_code, stderr = False, None, ""
     with open(d / "stream.jsonl", "w") as f:
-        proc = subprocess.run(cmd, cwd=d, input=prompt, stdout=f, stderr=subprocess.PIPE, text=True,
-                              timeout=1200, env=env)
+        try:
+            proc = subprocess.run(cmd, cwd=d, input=text, stdout=f, stderr=subprocess.PIPE, text=True,
+                                  timeout=1200, env=env)
+            exit_code, stderr = proc.returncode, proc.stderr
+        except subprocess.TimeoutExpired:
+            timed_out = True  # a hung tool call, most likely; the run counts, with what it left behind
     wall = time.monotonic() - t0
-    check = subprocess.run(["python3", str(HERE / "tasks" / task / "check.py"), str(d / "work.py")], capture_output=True, text=True)
+    check = subprocess.run(["python3", str(HERE / "tasks" / task / "check.py"), str(to_check)],
+                           capture_output=True, text=True)
     row = {"task": task, "model": model, "arm": arm, "ctx_kb": kb, "rep": rep, "wall_s": round(wall, 1),
-           "pass": check.returncode == 0, "check": check.stdout.strip(), "exit": proc.returncode}
+           "pass": check.returncode == 0, "check": check.stdout.strip(), "exit": exit_code, "timed_out": timed_out}
     stream = d / "stream.jsonl"
     row.update(parse_codex_stream(stream, arm) if a.agent == "codex" else parse_stream(stream, arm))
     row["code_ok"] = code_ok(row["pass"], row["check"])
@@ -240,8 +351,8 @@ def run_one(a, task: str, model: str, arm: str, kb: int, rep: int, background: d
     # "default" means the CLI chose: Codex models each have their own default level.
     row["effort"] = a.effort or "default"
     row["model_id"] = row["model_id"] or model
-    if proc.returncode != 0:
-        row["stderr"] = proc.stderr[-500:]
+    if exit_code:
+        row["stderr"] = stderr[-500:]
     return row
 
 
@@ -267,8 +378,8 @@ def parse_stream(path: Path, arm: str) -> dict:
                 name = b["name"]
                 tool_counts[name] = tool_counts.get(name, 0) + 1
                 command = b["input"].get("command", "") if name == "Bash" else ""
-                calls_neovain = bool(NEOVAIN_CALL.search(command))
-                is_edit = name == "Edit" or calls_neovain
+                calls_own = own_call(arm, command)
+                is_edit = name == "Edit" or calls_own
                 edit_calls += is_edit
                 pending[b["id"]] = is_edit
             elif b.get("type") == "tool_result" and pending.get(b.get("tool_use_id")):
@@ -291,28 +402,11 @@ def parse_stream(path: Path, arm: str) -> dict:
         "edit_calls": edit_calls,
         "edit_failed": edit_failed,
         "edits_discarded": discarded_calls(path),
+        "big_calls": big_calls(path, arm),
         "violations": len(scan_violations(path, arm)),
         "subtype": result.get("subtype"),
         "model_id": ",".join(sorted(result.get("modelUsage") or {})),
         "api_error": result.get("result") if result.get("is_error") or not result else None,
-    }
-
-
-def codex_prompts(binary: str) -> dict:
-    common = COMMON.replace("(Read, Grep, Glob, cat -n, rg)", "(cat -n, rg, sed -n)")
-    tool = f"""You must modify work.py ONLY by running the neovain CLI in the shell:
-  {binary} work.py STEP...
-Read {README} first to learn it. Do not write work.py any other way
-(no apply_patch or other file-editing tool, no sed -i, no redirection, no scripts)."""
-    return {
-        "edit": f"""{common}
-You must modify work.py ONLY with your built-in file-editing tool (apply_patch). Do not use shell
-commands, redirection or scripts to change the file.""",
-        "neovain": f"{common}\n{tool}",
-        "neovain-ex": f"""{common}
-{tool}
-Ex-only mode is enabled: only @anchor and :ex steps are accepted. Normal-mode keys and :normal are
-rejected. Insert text with :a, :i or :c.""",
     }
 
 
@@ -339,7 +433,7 @@ def parse_codex_stream(path: Path, arm: str) -> dict:
             error = json.dumps(ev.get("error") or ev.get("message") or ev)[:300]
         elif kind == "item.completed" and item.get("type") == "command_execution":
             counts["shell"] = counts.get("shell", 0) + 1
-            if NEOVAIN_CALL.search(item.get("command") or ""):
+            if own_call(arm, item.get("command") or ""):
                 edit_calls += 1
                 if "FAILED at step" in (item.get("aggregated_output") or "") or item.get("exit_code") not in (0, None):
                     edit_failed += 1
@@ -364,6 +458,7 @@ def parse_codex_stream(path: Path, arm: str) -> dict:
         "edit_calls": edit_calls,
         "edit_failed": edit_failed,
         "edits_discarded": discarded_calls(path),
+        "big_calls": big_calls(path, arm),
         "violations": len(scan_violations(path, arm)),
         "subtype": None,
         "model_id": None,
@@ -405,10 +500,14 @@ def summarize(rows: list[dict]) -> None:
         print("  ".join(t[c].ljust(w[c]) for c in cols))
 
 
-def preflight(binary: str, agent: str) -> None:
-    """Fail fast if the agent can't reach its API or neovain isn't runnable, instead of recording bogus FAILs."""
-    if not shutil.which(binary):
-        raise SystemExit(f"preflight: {binary!r} not found on PATH (cargo install --path .. or pass --bin)")
+def preflight(binary: str, agent: str, arms: list[str]) -> None:
+    """Fail fast if the agent can't reach its API or an arm's tool isn't runnable, instead of recording bogus FAILs."""
+    for arm in arms:
+        tool = binary if OWN.get(arm) == "neovain" else OWN.get(arm)
+        if arm not in OWN:
+            raise SystemExit(f"preflight: unknown arm {arm!r}; choose from {', '.join(OWN)}")
+        if tool and not shutil.which(tool):
+            raise SystemExit(f"preflight: {tool!r} not found on PATH, needed by the {arm} arm")
     if agent == "codex":
         p = subprocess.run(["codex", "login", "status"], capture_output=True, text=True, timeout=60)
         if p.returncode != 0 or "Logged in" not in p.stdout + p.stderr:
@@ -431,9 +530,9 @@ def main():
     ap.add_argument("--models", default="opus,sonnet")
     ap.add_argument("--effort", default="", help="reasoning effort to request, e.g. low, medium, high "
                     "(default: leave it to the CLI, which for Codex differs per model)")
-    ap.add_argument("--arms", default="edit,neovain,neovain-ex")
+    ap.add_argument("--arms", default="edit,neovain,neovain-ex", help="comma-separated: " + ", ".join(OWN))
     ap.add_argument("--context-kb", default="0", help="comma-separated preload sizes in KB, e.g. 0,400")
-    ap.add_argument("--task", default="small", help="task set(s) under tasks/, comma-separated: small,large")
+    ap.add_argument("--task", default="small", help="task set(s) under tasks/, comma-separated: small,large,multi")
     ap.add_argument("--reps", type=int, default=3)
     ap.add_argument("-j", "--jobs", type=int, default=3)
     ap.add_argument("--out", type=Path, default=HERE / "runs")
@@ -442,7 +541,7 @@ def main():
     a = ap.parse_args()
     results = a.out / "results.jsonl"
     if not a.summarize_only:
-        preflight(a.bin, a.agent)
+        preflight(a.bin, a.agent, a.arms.split(","))
         a.out.mkdir(parents=True, exist_ok=True)
         sizes = [int(k) for k in a.context_kb.split(",")]
         background = {kb: preload(kb) for kb in sizes}

@@ -28,9 +28,13 @@ CLAUDE = ["opus", "sonnet"]
 CODEX = ["gpt-6-astra", "gpt-6-sol", "gpt-6-luna", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.5"]
 # The release the site shows. Its tables compare each agent's own tool with this version of neovain.
 CURRENT = "0.2.0"
+# The other tools the neovain arm is compared with, as run: Neovim itself, headless, and ast-grep.
+NVIM = "0.11.3"
+ASTGREP = "0.45.3"
 # Batches behind the site's tables: both tools at medium effort, and neovain 0.2.0.
 SHOWN = ["claude-medium", "codex-gpt6-medium", "codex-5.6-medium",
-         "claude-0.2.0-small", "claude-0.2.0-large", "codex-0.2.0-small", "codex-0.2.0-large"]
+         "claude-0.2.0-small", "claude-0.2.0-large", "codex-0.2.0-small", "codex-0.2.0-large",
+         "claude-tools", "codex-tools"]
 # Batches behind the write-up's version tables: everything at medium effort, plus Claude's first round.
 HISTORY = SHOWN + ["claude-r1-small", "claude-r1-large", "claude-medium-v2", "codex-medium-v3"]
 METRICS = ["out_tok", "think_tok", "tool_calls", "edit_calls", "wall_s"]
@@ -187,16 +191,18 @@ def chart(title, sub, metric, unit, fmt, cells):
 
 
 def version(row):
-    """What the neovain arm ran with: the release, and for 0.1.0 the guidance it read."""
+    """What the arm ran with: for neovain the release, and for 0.1.0 the guidance it read."""
     if row["arm"] == "edit":
         return None
+    if row["arm"] in ("nvim", "ast-grep"):
+        return row.get("tool")
     return "0.2.0" if row.get("tool") == "0.2.0" else f"0.1.0, guidance {row['guidance']}"
 
 
 def tool_label(s):
     if s["arm"] == "edit":
         return "Edit tool" if s["agent"] == "claude" else "Patch tool"
-    return "neovain"
+    return {"nvim": "Neovim", "ast-grep": "ast-grep"}.get(s["arm"], "neovain")
 
 
 def score(done, n):
@@ -241,14 +247,78 @@ def pick(rows, model, task, arm, ver=None):
     return s
 
 
-def cells_for(rows, models, task, versions):
-    """The edit arm and the chosen versions of the neovain arm, model by model."""
+def cells_for(rows, models, task, versions, others=()):
+    """The edit arm, the chosen versions of the neovain arm and any other arms, model by model."""
     out = []
     for model in models:
-        for arm, ver in [("edit", None)] + [("neovain", v) for v in versions]:
+        for arm, ver in [("edit", None)] + [("neovain", v) for v in versions] + list(others):
             s = pick(rows, model, task, arm, ver)
             if s:
                 out.append(s)
+    return out
+
+
+OTHERS = [("nvim", NVIM), ("ast-grep", ASTGREP)]
+ALL_ARMS = [("edit", None), ("neovain", CURRENT)] + OTHERS
+
+
+def agent_cells(rows, task):
+    """One row per agent and tool, over every model of that agent: the site's tool comparison."""
+    out = []
+    for agent, models, name in (("claude", CLAUDE, "Claude"), ("codex", CODEX, "Codex")):
+        for arm, ver in ALL_ARMS:
+            mine = [r for r in rows if r["agent"] == agent and r["model"] in models and r["task"] == task
+                    and r["arm"] == arm and r.get("ctx_kb", 0) == 0 and version(r) == ver]
+            if mine:
+                s = summary(mine)
+                s.update(agent=agent, arm=arm, model_name=name, models=len({r["model"] for r in mine}))
+                out.append(s)
+    return out
+
+
+def tools_table(cells):
+    heads = ["exact", "code correct", "output tokens", "tool calls", "wall time", "cost"]
+    lines = ['<div class="table-wrap">', "  <table>",
+             '    <thead><tr><th class="text" scope="col">agent</th><th class="text" scope="col">tool</th>'
+             + "".join(f'<th scope="col">{h}</th>' for h in heads) + "</tr></thead>", "    <tbody>"]
+    for s in cells:
+        name = f'<th class="text" scope="row">{s["model_name"]}</th>'
+        tool = f'<td class="text"><i class="swatch {s["arm"]}"></i>{tool_label(s)}</td>'
+        if not s["n"]:
+            lines.append(f'      <tr>{name}{tool}<td class="text ctx" colspan="{len(heads)}">'
+                         f'left out: all {s["excluded"]} runs broke the rules</td></tr>')
+            continue
+        cost = f_usd(s["cost_usd"]) if s["cost_usd"] is not None else "–"
+        lines.append("      <tr>" + name + tool + score(s["exact"], s["n"]) + score(s["code_ok"], s["n"])
+                     + f'<td>{f_int(s["out_tok"])}</td><td>{f_one(s["tool_calls"])}</td>'
+                     f'<td>{f_seconds(s["wall_s"])}</td><td>{cost}</td></tr>')
+    lines += ["    </tbody>", "  </table>", "</div>"]
+    return lines
+
+
+def tools_md(cells):
+    rows = []
+    for s in cells:
+        lead = [s["model_name"], tool_label(s), str(s["models"])]
+        if not s["n"]:
+            rows.append(lead + [f"left out: all {s['excluded']} runs broke the rules"] + [""] * 5)
+            continue
+        cost = f_usd(s["cost_usd"]) if s["cost_usd"] is not None else ""
+        rows.append(lead + [f"{s['exact']}/{s['n']}", f"{s['code_ok']}/{s['n']}", f_int(s["out_tok"]),
+                            f_one(s["tool_calls"]), f_seconds(s["wall_s"]), cost])
+    return md_table(["Agent", "Tool", "Models", "Exact", "Code correct", "Output tokens", "Tool calls", "Wall time",
+                     "Cost"], rows)
+
+
+def whole_file(rows):
+    """Runs whose agent passed a whole file through its tool, by agent and tool."""
+    out = []
+    for agent, name in (("claude", "Claude"), ("codex", "Codex")):
+        for arm in ("neovain", "nvim", "ast-grep"):
+            mine = [r for r in rows if r["agent"] == agent and r["arm"] == arm and r["valid"]]
+            if mine:
+                out.append(f"{name}, {tool_label({'arm': arm, 'agent': agent})}: "
+                           f"{sum(r.get('big_calls', 0) > 0 for r in mine)} of {len(mine)}")
     return out
 
 
@@ -263,13 +333,18 @@ def behavior(rows):
         hit = [r for r in rows if where(r)]
         return sum(1 for r in hit if pred(r)), len(hit)
 
-    def both(pred, valid_only=True):
+    GROUPS = (("edit", "own tool"), ("neovain", "neovain"), ("nvim", "Neovim"), ("ast-grep", "ast-grep"))
+
+    def in_group(r, arm):
+        return r["arm"] in ("neovain", "neovain-ex") if arm == "neovain" else r["arm"] == arm
+
+    def both(pred, valid_only=True, groups=GROUPS):
         out = []
         for agent, name in (("claude", "Claude"), ("codex", "Codex")):
-            for arm, tool in (("edit", "own tool"), ("neovain", "neovain")):
-                k, n = count(pred, lambda r: r["agent"] == agent and (r["arm"] == "edit") == (arm == "edit")
-                             and (r["valid"] or not valid_only))
-                out.append(f"{name}, {tool}: {k} of {n}")
+            for arm, tool in groups:
+                k, n = count(pred, lambda r: r["agent"] == agent and in_group(r, arm) and (r["valid"] or not valid_only))
+                if n:
+                    out.append(f"{name}, {tool}: {k} of {n}")
         return out
 
     thrown = []
@@ -289,7 +364,9 @@ def behavior(rows):
          "few lines. 0.1.0 printed a 2,000-line diff there; 0.2.0 prints a summary.", thrown),
         ("Wrote a script to work out its patch", "Within the rules: the agent still applied the patch with its "
          "own tool. It helps explain the low token counts.",
-         both(lambda r: r.get("scripted_patch", False))[::2]),
+         both(lambda r: r.get("scripted_patch", False), groups=GROUPS[:1])),
+        ("Passed a whole file through its tool", "A call carrying 30 lines of text or more: the agent retyped "
+         "the file instead of describing the change. Within the rules.", whole_file(rows)),
     ]
     lines = ['<div class="table-wrap">', "  <table>",
              '    <thead><tr><th class="text" scope="col">what happened</th>'
@@ -418,6 +495,10 @@ def main():
               + ["</div>"])
     codex_large = cells_for(shown, CODEX, "large", [CURRENT])
     codex_small = cells_for(shown, CODEX, "small", [CURRENT])
+    tools = {task: agent_cells(shown, task) for task in ("large", "small", "multi")}
+    tools_html = []
+    for task, title in (("large", "Large structural edits"), ("small", "Small edits"), ("multi", "Multi-file API change")):
+        tools_html += [f'<h4 class="table-title">{title}</h4>'] + tools_table(tools[task])
 
     regions = {
         "demo": region("demo", demo_fragment(demo, headline)),
@@ -426,6 +507,7 @@ def main():
         "codex": region("codex", ['<h4 class="table-title">Large structural edits</h4>'] + table(codex_large, False)
                         + ['<h4 class="table-title">Small edits</h4>'] + table(codex_small, False)),
         "behavior": region("behavior", behavior(rows)),
+        "tools": region("tools", tools_html),
     }
 
     history = [r for r in rows if r["batch"] in HISTORY]
@@ -459,10 +541,16 @@ def main():
                         + totals_md(history, CODEX, "small", codex_versions), 0),
         "behavior": region("behavior", behavior_md(rows), 0),
     }
+    tools_md_lines = []
+    for task, title in (("large", "Large structural edits"), ("small", "Small edits"), ("multi", "Multi-file API change")):
+        tools_md_lines += [f"**{title}, every model of an agent together**", ""] + tools_md(tools[task]) + [""]
+        tools_md_lines += [f"**{title}, Claude**", ""] + md_cells(cells_for(shown, CLAUDE, task, [CURRENT], OTHERS), True) + [""]
+        tools_md_lines += [f"**{title}, Codex**", ""] + md_cells(cells_for(shown, CODEX, task, [CURRENT], OTHERS), False) + [""]
+    readme["tools"] = region("tools", tools_md_lines[:-1], 0)
     readme_path = BENCH / "README.md"
 
     data = {"headline": headline, "neovain": CURRENT, "claude_large": large_cells, "claude_small": small,
-            "codex_large": codex_large, "codex_small": codex_small, "demo": demo,
+            "codex_large": codex_large, "codex_small": codex_small, "demo": demo, "tools": tools, "other_tools": {"nvim": NVIM, "ast-grep": ASTGREP},
             "runs": len(rows), "runs_left_out": sum(not r["valid"] for r in rows)}
     data_text = json.dumps(data, indent=1) + "\n"
     data_path = SITE / "data" / "results.json"
