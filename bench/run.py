@@ -93,11 +93,15 @@ TOOLS = {
 NEOVAIN_CALL = re.compile(r"""(?:^|[\s;&|('"])(?:\S*/)?neovain(?:\s|$)""")
 NVIM_CALL = re.compile(r"""(?:^|[\s;&|('"])(?:\S*/)?nvim(?:\s|$)""")
 # ast-grep changes files only with -U/--update-all or -i/--interactive; without them it is a search.
-ASTGREP_WRITE = re.compile(r"""(?:^|[\s;&|('"])(?:\S*/)?(?:ast-grep|sg)\s[^|;&]*\s(?:-U|--update-all|-i|--interactive)\b""")
+ASTGREP_WRITE = re.compile(r"""(?:^|[\s;&|('"])(?:\S*/)?(?:ast-grep|sg)\s.*?\s(?:-U|--update-all|-i|--interactive)\b""", re.S)
+ASTGREP_CALL = re.compile(r"""(?:^|[\s;&|('"])(?:\S*/)?(?:ast-grep|sg)\s""")
+# Any call to the arm's tool, whether or not it writes: what it carries is not a shell write.
+EDITOR_CALLS = {"neovain": NEOVAIN_CALL, "nvim": NVIM_CALL, "ast-grep": ASTGREP_CALL}
 EDITORS = {"neovain": NEOVAIN_CALL, "nvim": NVIM_CALL, "ast-grep": ASTGREP_WRITE}
 # The task's own files, and the benchmark's files that hold the answers.
 TARGET = r"(?:\S*work\.py|\S*\bapp/\S+)"
 MENTIONS_TARGET = re.compile(r"work\.py|\bapp\b")
+VARIABLE = re.compile(r"\$[a-z_{(]")  # a shell variable that may hold a file name ($f, ${f}); ast-grep metavariables are upper case
 BENCH_FILES = re.compile(r"bench/tasks|/tasks/(?:small|large|multi)/|/expected/")
 # Shell commands that write a file. The first version of this check knew only sed -i, redirects and
 # open(..., "w"), and missed a model that rewrote work.py with Path.write_text and piped patches.
@@ -108,7 +112,7 @@ SHELL_WRITE = re.compile(
     rf"|>>?\s*{TARGET}"
     rf"|\btee\b[^|;\n]*{TARGET}"
     rf"|\b(mv|cp|install)\b[^|;&\n]*\s{TARGET}\s*($|[;&|\"'])"
-    r"|write_text|writelines|\.write\("
+    r"|\.write_text\(|\.writelines\(|\.write\("
     r"|open\([^)]*['\"][wa]\+?b?['\"]"
     r"|\bapply_patch\s*<|\|\s*apply_patch\b"
     r"|\bpatch\s+(-p\d|-i\b|<)|\bgit\s+apply\b"
@@ -204,20 +208,35 @@ def unwrap_shell(command: str) -> str:
 
 
 def simple_commands(script: str):
-    """The simple commands of a shell script, split at ; newline && || and |, outside quotes."""
-    out, quote, start, i = [], None, 0, 0
+    """The simple commands of a shell script, split at ; newline && || and | outside quotes.
+    A here-document stays with its command, so a Python script fed on stdin is one command."""
+    out, quote, start, i, heredoc = [], None, 0, 0, None
     while i < len(script):
         ch = script[i]
-        if quote:
+        if heredoc:
+            if ch == "\n":
+                line_end = script.find("\n", i + 1)
+                line = script[i + 1:line_end if line_end >= 0 else len(script)]
+                if line.strip() == heredoc:
+                    heredoc = None
+                    i = line_end if line_end >= 0 else len(script)
+                    continue
+        elif quote:
             if ch == "\\" and quote != "'" and i + 1 < len(script):
                 i += 1
             elif ch == quote:
                 quote = None
         elif ch in "'\"":
             quote = ch
+        elif ch == "<" and script.startswith("<<", i):
+            tag = re.match(r"<<-?\s*(['\"]?)(\w+)\1", script[i:])
+            if tag:
+                heredoc = tag.group(2)
+                i += tag.end()
+                continue
         elif ch in ";\n|" or script.startswith("&&", i):
             out.append(script[start:i])
-            i += 1 if ch in ";\n" else 2 if script.startswith(("&&", "||"), i) else 1
+            i += 2 if script.startswith(("&&", "||"), i) else 1
             start = i
             continue
         i += 1
@@ -225,14 +244,18 @@ def simple_commands(script: str):
     return [c for c in out if c.strip()]
 
 
-def without_own_calls(command: str, arm: str) -> str:
-    """The command with the arm's own editor calls taken out, so text they carry (a whole file in
-    an ast-grep template, say) is not mistaken for a shell write."""
-    editor = EDITORS.get(OWN[arm])
-    if not editor:
-        return command
-    script = unwrap_shell(command)
-    return "\n".join(c for c in simple_commands(script) if not editor.search(c))
+def shell_writes(command: str, arm: str):
+    """The writes to the task's files in a shell command, leaving out the arm's own tool calls (so
+    a whole file carried in an ast-grep template is not a write) and writes to other files (a rule
+    file in /tmp). A command that names the files, or uses a variable that may hold one, counts."""
+    editor = EDITOR_CALLS.get(OWN[arm])
+    for cmd in simple_commands(unwrap_shell(command)):
+        if editor and editor.search(cmd):
+            continue
+        if MENTIONS_TARGET.search(cmd) or VARIABLE.search(cmd) or "apply_patch" in cmd:
+            match = SHELL_WRITE.search(cmd)
+            if match:
+                yield match.group(0).strip()[:24]
 
 
 def scan_violations(path: Path, arm: str) -> list[str]:
@@ -255,11 +278,7 @@ def scan_violations(path: Path, arm: str) -> list[str]:
         for name, editor in EDITORS.items():
             if name != OWN[arm] and editor.search(text):
                 found.append(f"{name} used in the {arm} arm")
-        rest = without_own_calls(text, arm)
-        if MENTIONS_TARGET.search(rest) or "apply_patch" in rest:
-            match = SHELL_WRITE.search(rest)
-            if match:
-                found.append(f"shell write: {match.group(0).strip()[:24]}")
+        found += [f"shell write: {w}" for w in shell_writes(text, arm)]
     return found
 
 

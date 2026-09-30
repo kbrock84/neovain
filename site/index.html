@@ -308,6 +308,60 @@ or use @N@</span>
           </table>
         </div>
         <!-- /generated:codex -->
+        <div class="small-edits" id="tools">
+          <h3>Raw Neovim and ast-grep</h3>
+          <p class="note">How much of the saving is Vim, and how much is the wrapper? And does a rewriter that understands syntax do better? Two more arms: Neovim itself, headless, given the same editing advice as neovain, and <a href="https://ast-grep.github.io">ast-grep</a>, which finds code by its syntax tree and rewrites every match. And a third task built to suit ast-grep: five API changes across a 13-file package of 1,939 lines. Raw Neovim came close for Claude: a little ahead on the multi-file task, one run behind on the large one, twice neovain's output on small edits. For Codex, neovain stayed ahead on the large and small tasks (40% and 36% fewer output tokens, half the time, more correct runs) and level on the multi-file task. ast-grep was the most expensive and least reliable tool on every task for both agents, including the one built for it. A deleted node leaves its blank line and its comma behind, and the models spent most of their calls on that, or gave up and passed whole files through the tool. Codex's multi-file scores are held down by one file that imports <code>datetime</code> without using it: 24 runs, with every tool, added <code>timezone</code> there anyway.</p>
+        </div>
+        <!-- generated:tools -->
+        <h4 class="table-title">Large structural edits</h4>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th class="text" scope="col">agent</th><th class="text" scope="col">tool</th><th scope="col">exact</th><th scope="col">code correct</th><th scope="col">output tokens</th><th scope="col">tool calls</th><th scope="col">wall time</th><th scope="col">cost</th></tr></thead>
+            <tbody>
+              <tr><th class="text" scope="row">Claude</th><td class="text"><i class="swatch edit"></i>Edit tool</td><td>6/6</td><td>6/6</td><td>30,252</td><td>24.0</td><td>192s</td><td>$1.08</td></tr>
+              <tr><th class="text" scope="row">Claude</th><td class="text"><i class="swatch neovain"></i>neovain</td><td>6/6</td><td>6/6</td><td>2,289</td><td>6.8</td><td>28s</td><td>$0.23</td></tr>
+              <tr><th class="text" scope="row">Claude</th><td class="text"><i class="swatch nvim"></i>Neovim</td><td class="short">5/6</td><td class="short">5/6</td><td>2,786</td><td>8.2</td><td>34s</td><td>$0.23</td></tr>
+              <tr><th class="text" scope="row">Claude</th><td class="text"><i class="swatch ast-grep"></i>ast-grep</td><td class="short">2/4</td><td class="short">2/4</td><td>6,158</td><td>12.8</td><td>67s</td><td>$0.38</td></tr>
+              <tr><th class="text" scope="row">Codex</th><td class="text"><i class="swatch edit"></i>Patch tool</td><td class="short">10/18</td><td class="short">11/18</td><td>4,856</td><td>10.5</td><td>112s</td><td>–</td></tr>
+              <tr><th class="text" scope="row">Codex</th><td class="text"><i class="swatch neovain"></i>neovain</td><td class="short">16/21</td><td class="short">16/21</td><td>3,048</td><td>12.0</td><td>75s</td><td>–</td></tr>
+              <tr><th class="text" scope="row">Codex</th><td class="text"><i class="swatch nvim"></i>Neovim</td><td class="short">12/21</td><td class="short">12/21</td><td>5,099</td><td>16.6</td><td>149s</td><td>–</td></tr>
+              <tr><th class="text" scope="row">Codex</th><td class="text"><i class="swatch ast-grep"></i>ast-grep</td><td class="short">5/21</td><td class="short">10/21</td><td>7,667</td><td>24.9</td><td>197s</td><td>–</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h4 class="table-title">Small edits</h4>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th class="text" scope="col">agent</th><th class="text" scope="col">tool</th><th scope="col">exact</th><th scope="col">code correct</th><th scope="col">output tokens</th><th scope="col">tool calls</th><th scope="col">wall time</th><th scope="col">cost</th></tr></thead>
+            <tbody>
+              <tr><th class="text" scope="row">Claude</th><td class="text"><i class="swatch edit"></i>Edit tool</td><td>6/6</td><td>6/6</td><td>1,807</td><td>9.2</td><td>15s</td><td>$0.14</td></tr>
+              <tr><th class="text" scope="row">Claude</th><td class="text"><i class="swatch neovain"></i>neovain</td><td>6/6</td><td>6/6</td><td>1,266</td><td>3.2</td><td>15s</td><td>$0.17</td></tr>
+              <tr><th class="text" scope="row">Claude</th><td class="text"><i class="swatch nvim"></i>Neovim</td><td>6/6</td><td>6/6</td><td>2,651</td><td>5.0</td><td>28s</td><td>$0.17</td></tr>
+              <tr><th class="text" scope="row">Claude</th><td class="text"><i class="swatch ast-grep"></i>ast-grep</td><td class="short">4/6</td><td>6/6</td><td>5,439</td><td>8.8</td><td>51s</td><td>$0.24</td></tr>
+              <tr><th class="text" scope="row">Codex</th><td class="text"><i class="swatch edit"></i>Patch tool</td><td class="short">20/21</td><td class="short">20/21</td><td>929</td><td>3.5</td><td>27s</td><td>–</td></tr>
+              <tr><th class="text" scope="row">Codex</th><td class="text"><i class="swatch neovain"></i>neovain</td><td class="short">20/21</td><td class="short">20/21</td><td>2,418</td><td>6.5</td><td>58s</td><td>–</td></tr>
+              <tr><th class="text" scope="row">Codex</th><td class="text"><i class="swatch nvim"></i>Neovim</td><td class="short">20/21</td><td>21/21</td><td>3,760</td><td>9.0</td><td>106s</td><td>–</td></tr>
+              <tr><th class="text" scope="row">Codex</th><td class="text"><i class="swatch ast-grep"></i>ast-grep</td><td class="short">7/21</td><td class="short">17/21</td><td>6,255</td><td>20.2</td><td>157s</td><td>–</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h4 class="table-title">Multi-file API change</h4>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th class="text" scope="col">agent</th><th class="text" scope="col">tool</th><th scope="col">exact</th><th scope="col">code correct</th><th scope="col">output tokens</th><th scope="col">tool calls</th><th scope="col">wall time</th><th scope="col">cost</th></tr></thead>
+            <tbody>
+              <tr><th class="text" scope="row">Claude</th><td class="text"><i class="swatch edit"></i>Edit tool</td><td class="short">5/6</td><td>6/6</td><td>39,872</td><td>201.0</td><td>256s</td><td>$1.53</td></tr>
+              <tr><th class="text" scope="row">Claude</th><td class="text"><i class="swatch neovain"></i>neovain</td><td class="short">5/6</td><td class="short">5/6</td><td>5,122</td><td>7.8</td><td>52s</td><td>$0.43</td></tr>
+              <tr><th class="text" scope="row">Claude</th><td class="text"><i class="swatch nvim"></i>Neovim</td><td>6/6</td><td>6/6</td><td>4,667</td><td>6.5</td><td>55s</td><td>$0.36</td></tr>
+              <tr><th class="text" scope="row">Claude</th><td class="text"><i class="swatch ast-grep"></i>ast-grep</td><td class="short">3/6</td><td class="short">3/6</td><td>11,855</td><td>18.2</td><td>119s</td><td>$0.62</td></tr>
+              <tr><th class="text" scope="row">Codex</th><td class="text"><i class="swatch edit"></i>Patch tool</td><td class="short">10/18</td><td class="short">11/18</td><td>8,465</td><td>21.5</td><td>185s</td><td>–</td></tr>
+              <tr><th class="text" scope="row">Codex</th><td class="text"><i class="swatch neovain"></i>neovain</td><td class="short">8/21</td><td class="short">10/21</td><td>5,554</td><td>18.5</td><td>130s</td><td>–</td></tr>
+              <tr><th class="text" scope="row">Codex</th><td class="text"><i class="swatch nvim"></i>Neovim</td><td class="short">10/21</td><td class="short">10/21</td><td>5,531</td><td>17.8</td><td>153s</td><td>–</td></tr>
+              <tr><th class="text" scope="row">Codex</th><td class="text"><i class="swatch ast-grep"></i>ast-grep</td><td class="short">3/21</td><td class="short">9/21</td><td>8,630</td><td>36.0</td><td>204s</td><td>–</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- /generated:tools -->
       </div>
     </section>
 
@@ -320,11 +374,12 @@ or use @N@</span>
           <table>
             <thead><tr><th class="text" scope="col">what happened</th><th class="text" scope="col">runs</th></tr></thead>
             <tbody>
-              <tr><th class="text wrap" scope="row"><strong>Changed the file with the wrong tool</strong><br>These runs are left out of every table.</th><td class="text">Claude, own tool: 0 of 30<br>Claude, neovain: 0 of 90<br>Codex, own tool: 3 of 60<br>Codex, neovain: 0 of 162</td></tr>
-              <tr><th class="text wrap" scope="row"><strong>Wrong code</strong><br>A requested change was missing, incomplete or damaged other code.</th><td class="text">Claude, own tool: 0 of 30<br>Claude, neovain: 2 of 90<br>Codex, own tool: 14 of 57<br>Codex, neovain: 17 of 162</td></tr>
-              <tr><th class="text wrap" scope="row"><strong>Right code, wrong blank lines</strong><br>Most often two extra blank lines at the end of the file, after moving a class there.</th><td class="text">Claude, own tool: 0 of 30<br>Claude, neovain: 0 of 90<br>Codex, own tool: 3 of 57<br>Codex, neovain: 21 of 162</td></tr>
+              <tr><th class="text wrap" scope="row"><strong>Changed the file with the wrong tool</strong><br>These runs are left out of every table.</th><td class="text">Claude, own tool: 0 of 36<br>Claude, neovain: 0 of 96<br>Claude, Neovim: 0 of 18<br>Claude, ast-grep: 2 of 18<br>Codex, own tool: 6 of 81<br>Codex, neovain: 0 of 183<br>Codex, Neovim: 0 of 63<br>Codex, ast-grep: 0 of 63</td></tr>
+              <tr><th class="text wrap" scope="row"><strong>Wrong code</strong><br>A requested change was missing, incomplete or damaged other code.</th><td class="text">Claude, own tool: 0 of 36<br>Claude, neovain: 3 of 96<br>Claude, Neovim: 1 of 18<br>Claude, ast-grep: 5 of 16<br>Codex, own tool: 21 of 75<br>Codex, neovain: 28 of 183<br>Codex, Neovim: 20 of 63<br>Codex, ast-grep: 27 of 63</td></tr>
+              <tr><th class="text wrap" scope="row"><strong>Right code, wrong blank lines</strong><br>Most often two extra blank lines at the end of the file, after moving a class there.</th><td class="text">Claude, own tool: 1 of 36<br>Claude, neovain: 0 of 96<br>Claude, Neovim: 0 of 18<br>Claude, ast-grep: 2 of 16<br>Codex, own tool: 4 of 75<br>Codex, neovain: 23 of 183<br>Codex, Neovim: 1 of 63<br>Codex, ast-grep: 21 of 63</td></tr>
               <tr><th class="text wrap" scope="row"><strong>Threw neovain's output away</strong><br>On the large task: sent it to /dev/null, filtered it, or kept only a few lines. 0.1.0 printed a 2,000-line diff there; 0.2.0 prints a summary.</th><td class="text">Claude, neovain 0.1.0: 25 of 30<br>Claude, neovain 0.2.0: 1 of 6<br>Codex, neovain 0.1.0: 4 of 60<br>Codex, neovain 0.2.0: 0 of 21</td></tr>
-              <tr><th class="text wrap" scope="row"><strong>Wrote a script to work out its patch</strong><br>Within the rules: the agent still applied the patch with its own tool. It helps explain the low token counts.</th><td class="text">Claude, own tool: 0 of 30<br>Codex, own tool: 7 of 57</td></tr>
+              <tr><th class="text wrap" scope="row"><strong>Wrote a script to work out its patch</strong><br>Within the rules: the agent still applied the patch with its own tool. It helps explain the low token counts.</th><td class="text">Claude, own tool: 0 of 36<br>Codex, own tool: 13 of 75</td></tr>
+              <tr><th class="text wrap" scope="row"><strong>Passed a whole file through its tool</strong><br>A call carrying 30 lines of text or more: the agent retyped the file instead of describing the change. Within the rules.</th><td class="text">Claude, neovain: 0 of 84<br>Claude, Neovim: 1 of 18<br>Claude, ast-grep: 11 of 16<br>Codex, neovain: 0 of 183<br>Codex, Neovim: 2 of 63<br>Codex, ast-grep: 20 of 63</td></tr>
             </tbody>
           </table>
         </div>

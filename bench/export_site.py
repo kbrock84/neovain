@@ -407,16 +407,20 @@ def md_cells(cells, claude, versions=False):
 
 def behavior_md(rows):
     groups = [("Claude", "claude", "edit", "Edit tool"), ("Claude", "claude", "neovain", "neovain"),
-              ("Codex", "codex", "edit", "Patch tool"), ("Codex", "codex", "neovain", "neovain")]
+              ("Claude", "claude", "nvim", "Neovim"), ("Claude", "claude", "ast-grep", "ast-grep"),
+              ("Codex", "codex", "edit", "Patch tool"), ("Codex", "codex", "neovain", "neovain"),
+              ("Codex", "codex", "nvim", "Neovim"), ("Codex", "codex", "ast-grep", "ast-grep")]
     out = []
     for name, agent, arm, tool in groups:
-        mine = [r for r in rows if r["agent"] == agent and (r["arm"] == "edit") == (arm == "edit")]
+        arms = ("neovain", "neovain-ex") if arm == "neovain" else (arm,)
+        mine = [r for r in rows if r["agent"] == agent and r["arm"] in arms]
         ok = [r for r in mine if r["valid"]]
         out.append([name, tool, str(len(mine)), str(len(mine) - len(ok)), str(sum(not r["code_ok"] for r in ok)),
                     str(sum(r["code_ok"] and not r["pass"] for r in ok)),
-                    str(sum(r.get("scripted_patch", False) for r in ok)) if arm == "edit" else ""])
+                    str(sum(r.get("scripted_patch", False) for r in ok)) if arm == "edit" else "",
+                    str(sum(r.get("big_calls", 0) > 0 for r in ok)) if arm != "edit" else ""])
     lines = md_table(["Agent", "Tool", "Runs", "Wrong tool (left out)", "Wrong code",
-                      "Right code, wrong blank lines", "Scripted its patch"], out)
+                      "Right code, wrong blank lines", "Scripted its patch", "Passed a whole file through the tool"], out)
     thrown = []
     for agent, name in (("claude", "Claude"), ("codex", "Codex")):
         for ver in ("0.1.0", "0.2.0"):
@@ -542,10 +546,14 @@ def main():
         "behavior": region("behavior", behavior_md(rows), 0),
     }
     tools_md_lines = []
+    # The large and small tasks already have per-model tables above; here only the new tools per model.
+
+    def new_only(cells, task):
+        return cells if task == "multi" else [s for s in cells if s["arm"] in ("nvim", "ast-grep")]
     for task, title in (("large", "Large structural edits"), ("small", "Small edits"), ("multi", "Multi-file API change")):
         tools_md_lines += [f"**{title}, every model of an agent together**", ""] + tools_md(tools[task]) + [""]
-        tools_md_lines += [f"**{title}, Claude**", ""] + md_cells(cells_for(shown, CLAUDE, task, [CURRENT], OTHERS), True) + [""]
-        tools_md_lines += [f"**{title}, Codex**", ""] + md_cells(cells_for(shown, CODEX, task, [CURRENT], OTHERS), False) + [""]
+        tools_md_lines += [f"**{title}, Claude**", ""] + md_cells(new_only(cells_for(shown, CLAUDE, task, [CURRENT], OTHERS), task), True) + [""]
+        tools_md_lines += [f"**{title}, Codex**", ""] + md_cells(new_only(cells_for(shown, CODEX, task, [CURRENT], OTHERS), task), False) + [""]
     readme["tools"] = region("tools", tools_md_lines[:-1], 0)
     readme_path = BENCH / "README.md"
 
