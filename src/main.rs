@@ -14,6 +14,8 @@ use std::time::{Duration, Instant};
 use std::{env, fs, thread};
 
 const DRIVER: &str = include_str!("driver.lua");
+
+mod validate;
 /// The lines of context around each change in a diff, unless -C asks for another number.
 const DEFAULT_CONTEXT: usize = 2;
 
@@ -27,6 +29,7 @@ Steps (applied in order, stopping at the first failure; file untouched on failur
   @N@regex     move cursor to the Nth matching line
   :excmd       run an ex command, e.g. ':%s/foo/bar/g'  ':g/^#/d'  ':10,20m$'
   anything     normal-mode keys, <Esc>/<CR>/<C-v> notation, e.g. 'ciwnewname<Esc>'
+               steps may not write the file or quit Neovim (:w, :wq, :x, :q, ZZ, ZQ are rejected)
 
 Options:
   -n, --dry-run      show the changes without writing
@@ -35,13 +38,22 @@ Options:
                      changes if it is long. full: always the diff. summary: always the summary
       --sw N         shiftwidth for > and < when the file indents with spaces (default 4)
       --timeout SECS default 10
+      --safe           agent-safe profile: only @anchor and :ex steps, ex commands from a fixed
+                       allow-list of buffer edits, and the target inside the workspace. Refuses
+                       anything it cannot read instead of running it. Requires --workspace
+      --workspace DIR  confine the target file to DIR: canonicalized, so `..` and symlinks that
+                       leave DIR are rejected. Usable alone; required with --safe
   --                 treat everything after as steps (for steps starting with '-')
   -h, --help         show this help
   -V, --version      show version
 
 Environment:
   NEOVAIN_NVIM       path to the nvim binary (default: nvim on PATH)
-  NEOVAIN_EX_ONLY=1  allow only @anchor and :ex steps (no normal-mode keys, no :normal)
+  NEOVAIN_EX_ONLY=1  allow only @anchor and :ex steps: no normal-mode keys, no :normal/:execute,
+                     no :!, :lua, :py, :perl, :ruby, :source, :runtime, :earlier/:later.
+                     A style restriction for benchmarks, not a sandbox.
+  NEOVAIN_SAFE=1        same as --safe
+  NEOVAIN_WORKSPACE=DIR same as --workspace
 
 Exit status: 0 success, 1 a step failed or timed out (file unchanged), 2 usage/setup error.
 ";
@@ -54,6 +66,9 @@ struct Args {
     context: usize,
     sw: u32,
     timeout: Duration,
+    /// The agent-safe profile: an allow-list of buffer edits and a workspace root.
+    safe: bool,
+    workspace: Option<PathBuf>,
 }
 
 /// What to print after an edit that changed the file.
@@ -88,6 +103,7 @@ fn parse_args() -> Result<Option<Args>, String> {
     let mut diff = Mode::Auto;
     let mut positional = Vec::new();
     let mut only_steps = false;
+    let (mut safe, mut workspace) = (false, None::<PathBuf>);
     fn value<T: std::str::FromStr>(flag: &str, v: Option<String>) -> Result<T, String> {
         let v = v.ok_or_else(|| format!("{flag} needs a value"))?;
         v.parse().map_err(|_| format!("bad value for {flag}: {v:?}"))
@@ -115,15 +131,26 @@ fn parse_args() -> Result<Option<Args>, String> {
             "--timeout" => timeout = value(&a, it.next())?,
             "--diff" => diff = value(&a, it.next())?,
             s if s.starts_with("--diff=") => diff = value("--diff", s.split_once('=').map(|(_, v)| v.to_string()))?,
+            "--safe" => safe = true,
+            "--workspace" => workspace = Some(value(&a, it.next())?),
+            s if s.starts_with("--workspace=") => {
+                workspace = Some(value("--workspace", s.split_once('=').map(|(_, v)| v.to_string()))?)
+            }
             s if s.starts_with("--") => return Err(format!("unknown option {s}")),
             _ => positional.push(a),
         }
+    }
+    safe = safe || env::var("NEOVAIN_SAFE").is_ok_and(|v| v == "1");
+    workspace = workspace.or_else(|| env::var_os("NEOVAIN_WORKSPACE").filter(|v| !v.is_empty()).map(PathBuf::from));
+    if safe && workspace.is_none() {
+        return Err("the safe profile needs a workspace root: pass --workspace DIR or set NEOVAIN_WORKSPACE".into());
     }
     if positional.len() < 2 {
         return Err("need FILE and at least one STEP (see --help)".into());
     }
     let file = PathBuf::from(positional.remove(0));
-    Ok(Some(Args { file, steps: positional, dry_run, diff, context, sw, timeout: Duration::from_secs_f64(timeout) }))
+    let timeout = Duration::from_secs_f64(timeout);
+    Ok(Some(Args { file, steps: positional, dry_run, diff, context, sw, timeout, safe, workspace }))
 }
 
 /// Git Bash/MSYS rewrites args like '/foo<CR>' into 'C:/Program Files/Git/foo<CR>' before we see them.
@@ -133,30 +160,16 @@ fn msys_mangled(step: &str) -> bool {
         && step.contains("/Git/")
 }
 
-/// In ex-only mode, reject steps that type normal-mode keys, directly or via :normal / :exe.
-fn ex_only_violation(step: &str) -> Option<&'static str> {
-    if step.starts_with('@') {
-        return None;
-    }
-    let Some(cmd) = step.strip_prefix(':') else {
-        return Some("normal-mode keys are disabled (NEOVAIN_EX_ONLY); use @anchor and :ex steps");
-    };
-    // Strip a leading range like "%", "'<,'>", "10,20", ".,+3" so ":%norm" is caught too.
-    let body = cmd.trim_start_matches(|c: char| c.is_ascii_digit() || ",.;$%'<>+-/?^ ".contains(c));
-    let word: String = body.chars().take_while(|c| c.is_ascii_alphabetic()).collect();
-    let is_normal = word.len() >= 4 && "normal".starts_with(&word);
-    let is_exe = word.len() >= 3 && "execute".starts_with(&word);
-    let in_global = (word.starts_with('g') || word.starts_with('v'))
-        && ("global".starts_with(&word) || "vglobal".starts_with(&word))
-        && body.contains("norm");
-    (is_normal || is_exe || in_global).then_some(":normal/:execute are disabled (NEOVAIN_EX_ONLY)")
-}
-
 fn run_nvim(a: &Args, file: &Path) -> Result<(Value, Option<Vec<u8>>), Fail> {
     let tmp = tempfile::Builder::new().prefix("neovain-").tempdir().map_err(|e| Fail::Usage(e.to_string()))?;
     let (driver, job_path, out, report) =
         (tmp.path().join("driver.lua"), tmp.path().join("job.json"), tmp.path().join("out"), tmp.path().join("report.json"));
-    let job = json!({"file": file, "steps": a.steps, "sw": a.sw, "out": out, "report": report});
+    // Neovim edits a copy: a step that writes anyway writes the copy, so neovain stays the only
+    // one that can touch the real file and --dry-run holds by construction. The copy has the same
+    // bytes, so fileformat, indent style and the empty-file rule detect exactly as before.
+    let buf = tmp.path().join("buf");
+    fs::copy(file, &buf).map_err(|e| Fail::Usage(format!("cannot copy {} for editing: {e}", file.display())))?;
+    let job = json!({"file": buf, "steps": a.steps, "sw": a.sw, "out": out, "report": report});
     fs::write(&driver, DRIVER).and_then(|_| fs::write(&job_path, job.to_string())).map_err(|e| Fail::Usage(e.to_string()))?;
 
     let nvim = env::var_os("NEOVAIN_NVIM").unwrap_or_else(|| "nvim".into());
@@ -193,7 +206,14 @@ fn run_nvim(a: &Args, file: &Path) -> Result<(Value, Option<Vec<u8>>), Fail> {
             if let Some(mut e) = child.stderr.take() {
                 let _ = std::io::Read::read_to_string(&mut e, &mut stderr);
             }
-            return Err(Fail::Usage(format!("nvim produced no report (exit {status}):\n{stderr}")));
+            // A step that quits Neovim (`:q`, `ZZ`) leaves without a report. The buffer was a
+            // copy, so the file really is unchanged and this is a failed step, not a bad setup.
+            return Err(match status.success() {
+                true => Fail::Step(format!(
+                    "neovim quit before writing its report (a step ran something like ':q' or 'ZZ')\nfile unchanged\n{stderr}"
+                )),
+                false => Fail::Usage(format!("nvim produced no report (exit {status}):\n{stderr}")),
+            });
         }
     };
     let after = if report["ok"].as_bool() == Some(true) {
@@ -236,6 +256,26 @@ fn run(a: Args) -> Result<(), Fail> {
     if !a.file.is_file() {
         return Err(Fail::Usage(format!("no such file: {}", a.file.display())));
     }
+    // Confinement resolves symlinks and `..` on both sides before anything else runs.
+    if let Some(root) = &a.workspace {
+        let root = fs::canonicalize(root).map_err(|e| Fail::Usage(format!("cannot use workspace {}: {e}", root.display())))?;
+        let target = fs::canonicalize(&a.file).map_err(|e| Fail::Usage(e.to_string()))?;
+        if !target.starts_with(&root) {
+            return Err(Fail::Usage(format!("{} is outside the workspace {}", a.file.display(), root.display())));
+        }
+    }
+    for (i, s) in a.steps.iter().enumerate() {
+        if let Some(why) = validate::write_or_quit_violation(s) {
+            return Err(Fail::Usage(format!("step {} {s:?}: {why}", i + 1)));
+        }
+    }
+    if a.safe {
+        for (i, s) in a.steps.iter().enumerate() {
+            if let Some(why) = validate::safe_violation(s) {
+                return Err(Fail::Usage(format!("step {} {s:?}: {why}", i + 1)));
+            }
+        }
+    }
     if env::var_os("MSYSTEM").is_some() {
         if let Some(s) = a.steps.iter().find(|s| msys_mangled(s)) {
             return Err(Fail::Usage(format!(
@@ -245,7 +285,7 @@ fn run(a: Args) -> Result<(), Fail> {
     }
     if env::var("NEOVAIN_EX_ONLY").is_ok_and(|v| v == "1") {
         for (i, s) in a.steps.iter().enumerate() {
-            if let Some(why) = ex_only_violation(s) {
+            if let Some(why) = validate::ex_only_violation(s) {
                 return Err(Fail::Step(format!("FAILED at step {} {s:?}: {why}\nfile unchanged", i + 1)));
             }
         }
@@ -346,18 +386,8 @@ fn main() -> ExitCode {
 
 #[cfg(test)]
 mod tests {
-    use super::{ex_only_violation, msys_mangled};
+    use super::msys_mangled;
 
-    #[test]
-    fn ex_only_rules() {
-        for ok in ["@^def", ":%s/a/b/g", ":g/# DEBUG$/d", ":10,20m$", ":call append(3, ['x'])", ":n", ":nohl"] {
-            assert!(ex_only_violation(ok).is_none(), "{ok}");
-        }
-        for bad in ["dd", "ciwx<Esc>", ":norm dd", ":normal! dd", ":%norm A;", ":'<,'>normal x", ":exe \"norm dd\"",
-            ":g/x/norm dd", ":v/x/normal dd"] {
-            assert!(ex_only_violation(bad).is_some(), "{bad}");
-        }
-    }
 
     #[test]
     fn detects_msys_mangling() {

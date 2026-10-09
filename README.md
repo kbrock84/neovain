@@ -129,7 +129,21 @@ WARNING: file ends with 3 newlines, was 1 (2 blank lines at the end)
 WARNING: no blank line between 137 and 138, was 2
 reindented 27 lines: 36-62 -> 36-62, indent +4 spaces  (if item.get("stock") is None:)
   WARNING: 2 lines are indented less than the block's first line, from +44
+WARNING: line 2 is indented but no enclosing block starts above it (left behind by a range?)
 ```
+
+A range can also stop too early, and leave the last lines of a block beside a line that
+cannot hold them:
+
+```
+WARNING: line 2 is indented but no enclosing block starts above it (left behind by a range?)
+```
+
+It is printed only where this edit created the situation, so a file that already stood that
+way is not warned about on every change to it. Nothing is parsed: the line above counts as a
+block head if it ends in `:`, `{`, `(`, `[`, `,` or `)`, or starts with a keyword like `def`
+or `if`, and a markdown heading, list item or a line that continues also counts. The warning
+means "look at this line", not "this line is wrong".
 
 The first two say that blank lines went to the wrong place. Where two blocks were joined,
 the blank lines between them are compared with the blank lines each block had next to it
@@ -177,6 +191,10 @@ The summary works on lines and knows nothing about the language of the file.
 - **Transactional.** The first failing step aborts the run: a search miss, an ambiguous or
   missing anchor, or an ex error. The file is left untouched and the output names the
   failing step.
+- **One writer.** A step may not write the file or end Neovim: `:w`, `:wq`, `:x`, `:q`, `ZZ`,
+  `ZQ` and their relatives are rejected as usage errors, because neovain writes the file
+  itself, once every step has succeeded. Neovim edits a copy of it, so a write it does not
+  see coming can only reach that copy.
 - **Literal typing.** Autoindent, formatoptions, textwidth and filetype plugins are all off.
   Text typed in insert mode lands exactly as typed, so write the indentation yourself.
 - **No wraparound.** `wrapscan` is off, so `/pat<CR>` only searches forward from the cursor.
@@ -223,7 +241,8 @@ The summary works on lines and knows nothing about the language of the file.
    Compare them with what you meant: a block much larger than you expected is a range that ran
    too far. Act on every line that starts with `WARNING`, in a summary or below a diff. It
    says that blank lines were lost or piled up where blocks were joined, that the file ends
-   in blank lines, or that a block ran past the end of the block it started in. To repair
+   in blank lines, that a block ran past the end of the block it started in, or that a line
+was left indented with no block above it. To repair
    spacing, `:%s/\n\{4,}/\r\r\r/e` cuts runs of three or more blank lines down to two, and
    `:%s/\n\+\%$//e` removes blank lines at the end of the file.
 8. **Quote each step in single quotes.** Backslashes inside single quotes reach neovain as
@@ -247,7 +266,48 @@ $ neovain new.html $':0a\n<!doctype html>\n<title>New page</title>\n.'
 ## Ex-only mode
 
 With `NEOVAIN_EX_ONLY=1`, only `@anchor` and `:ex` steps are accepted. Normal-mode keys,
-`:normal` and `:execute` are rejected. Insert text with `:a`, `:i` or `:c` (see above).
+`:normal` and `:execute` are rejected, and so are the ex commands that leave the buffer:
+`:!`, `:lua`/`:luado`/`:luafile`, `:py*`, `:perl`, `:ruby`, `:source`, `:runtime`,
+`:earlier`/`:later`. Insert text with `:a`, `:i` or `:c` (see above).
+
+**It is a style restriction, not a sandbox.** It exists so the benchmark can measure
+ex-command editing, and it blocks the obvious ways out of the buffer, but ex commands are
+vimscript: `:call system('…')` still runs a shell. Do not use it to run untrusted steps.
+
+## Agent-safe profile
+
+With `--safe` (or `NEOVAIN_SAFE=1`) plus a workspace root, `--workspace DIR`
+(or `NEOVAIN_WORKSPACE=DIR`), neovain runs every step under two independent
+controls. This is the profile for model-generated steps against a local
+project:
+
+- **An allow-list instead of a deny-list.** Only `@anchor` steps and ex
+  commands from a fixed list of buffer edits are accepted: `:s`, `:d`, `:m`,
+  `:t`/`:co`, `:g`/`:v` (whose nested command goes through the same list),
+  `:a`, `:i`, `:c`, `:j`, `:pu`, `:y`, `:sort`, `:retab` and `:undo`, short or
+  full. Everything else is refused before Neovim starts: `:!`, `:call`,
+  `:execute`, `:normal`, `:lua`, `:source`, `:read`, `:w`, chained commands
+  (`|`), expression replacements (`\=`), the `=` register, normal-mode keys,
+  and anything the parser cannot read. `:call system('...')` never runs.
+- **The target must live in the workspace.** Both paths are canonicalized, so
+  `..` traversal and a symlink that leaves the directory are refused.
+  `--workspace` works on its own too, confining the target without the
+  allow-list.
+
+A refused command or path is a usage error (exit 2); a failing step keeps the
+usual semantics (exit 1, file unchanged). The default mode and
+`NEOVAIN_EX_ONLY=1` are untouched: the profile is opt-in.
+
+For an OpenCode wrapper:
+
+```bash
+export NEOVAIN_SAFE=1 NEOVAIN_WORKSPACE="$PWD"
+neovain app.py '@^def load' ':%s/\<load(/read_file(/g'
+```
+
+The profile confines the commands and the path inside one Neovim process; it
+is not a kernel sandbox. Reach for it, not ex-only, when the steps come from a
+model.
 
 ## Install
 

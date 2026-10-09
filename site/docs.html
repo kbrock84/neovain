@@ -55,6 +55,7 @@
       <a href="#guarantees">guarantees</a>
       <a href="#agents">for agents</a>
       <a href="#ex-only">ex-only mode</a>
+      <a href="#safe">agent-safe profile</a>
       <a href="#windows">windows</a>
       <a href="#reference">reference</a>
     </nav>
@@ -157,13 +158,19 @@ moved 66 lines: 65-130 -&gt; 126-191  (class Pricing:)
         </tbody>
       </table>
       <p>A block starts and ends on a line that is not blank. Its first line follows in parentheses, then an excerpt: the line before the block, its first and last lines, and the line after it. A moved or deleted block that holds more than one unit says so, as in <code>(def load(path):) +2 more at this indent</code> for three functions, and the excerpt shows where the others start. A moved or re-indented block that holds more or fewer blank lines than before gives both sizes, as in <code>reindented 9 lines to 7</code>. When the summary would get too long, the excerpts get shorter, and then blocks are left out and counted.</p>
-      <p>The warnings are about the two mistakes that a valid command makes most often:</p>
+      <p>The warnings are about the mistakes that a valid command makes most often:</p>
       <div class="pane">
 <pre class="term"><span class="fail">WARNING: file ends with 3 newlines, was 1 (2 blank lines at the end)
 WARNING: no blank line between 137 and 138, was 2</span>
 reindented 27 lines: 36-62 -&gt; 36-62, indent +4 spaces  (if item.get("stock") is None:)
-<span class="fail">  WARNING: 2 lines are indented less than the block's first line, from +44</span></pre>
+<span class="fail">  WARNING: 2 lines are indented less than the block's first line, from +44</span>
+<span class="fail">WARNING: line 2 is indented but no enclosing block starts above it (left behind by a range?)</span></pre>
       </div>
+      <p>A range can also stop too early, leaving the last lines of a block beside a line that cannot hold them:</p>
+      <div class="pane">
+<pre class="term"><span class="fail">WARNING: line 2 is indented but no enclosing block starts above it (left behind by a range?)</span></pre>
+      </div>
+      <p>It is printed only where the edit created the situation, so a file that already stood that way is not warned about on every change to it. Nothing is parsed: the line above counts as a block head if it ends in <code>:</code>, <code>{</code>, <code>(</code>, <code>[</code>, <code>,</code> or <code>)</code>, or starts with a keyword like <code>def</code> or <code>if</code>, and a heading, a list item or a line that continues also counts. It means "look at this line", not "this line is wrong".</p>
       <p>The first two say that blank lines went to the wrong place. Where two blocks were joined, the blank lines between them are compared with the blank lines each block had next to it before. The last one says that a range ran past the end of the block it started in: a method body that is indented together with the methods after it holds lines indented less than its first line, and the first line of the method did not move with them.</p>
       <p>A warning is given only where the old file shows what the spacing should be. Next to text that is new it does not, so a run of blank lines that changed there is a <code>spacing:</code> line at most. A line on its own that moved is treated the same way.</p>
       <p>Warnings are not kept for the summary. After a diff that is printed in full they follow it, below an empty line. A diff with nothing to warn about is followed by nothing.</p>
@@ -220,6 +227,7 @@ WARNING: no blank line between 7 and 8, was 1</span></pre>
       <h2 id="guarantees">Guarantees</h2>
       <ul class="points">
         <li><span><strong>Transactional.</strong> The first failing step (a search miss, an ambiguous or missing anchor, an ex error) aborts the run. The file is not touched.</span></li>
+        <li><span><strong>One writer.</strong> Steps that write the file or end Neovim (<code>:w</code>, <code>:wq</code>, <code>:x</code>, <code>:q</code>, <code>ZZ</code>, <code>ZQ</code>) are rejected as usage errors. neovain writes the file itself, once every step has succeeded, and Neovim works on a copy of it.</span></li>
         <li><span><strong>Literal typing.</strong> Autoindent, formatoptions, textwidth and filetype plugins are off. Text typed in insert mode lands exactly as typed.</span></li>
         <li><span><strong>No wraparound.</strong> <code>wrapscan</code> is off, so <code>/pat&lt;CR&gt;</code> only searches forward from the cursor.</span></li>
         <li><span><strong>Indentation that matches the file.</strong> <code>&gt;</code> and <code>&lt;</code> use tabs if the file already indents with tabs. Otherwise they use <code>--sw</code> spaces (default 4).</span></li>
@@ -254,7 +262,16 @@ WARNING: no blank line between 7 and 8, was 1</span></pre>
       <p>Where it helps most: moving, deleting, re-indenting and reordering large blocks, and changes that repeat across a file. For a small local change, exact string replacement is just as good. See the <a href="/#benchmarks">benchmarks</a>.</p>
 
       <h2 id="ex-only">Ex-only mode</h2>
-      <p>With <code>NEOVAIN_EX_ONLY=1</code>, only anchors and ex commands are accepted. Normal-mode keys, <code>:normal</code> and <code>:execute</code> are rejected, and text goes in with <code>:a</code>, <code>:i</code> or <code>:c</code>. The benchmark harness uses it to test whether keystroke-level editing costs agents extra reasoning.</p>
+      <p>With <code>NEOVAIN_EX_ONLY=1</code>, only anchors and ex commands are accepted. Normal-mode keys, <code>:normal</code> and <code>:execute</code> are rejected, and so are the ex commands that leave the buffer (<code>:!</code>, <code>:lua</code>, <code>:py</code>, <code>:perl</code>, <code>:ruby</code>, <code>:source</code>, <code>:runtime</code>, <code>:earlier</code>/<code>:later</code>). Text goes in with <code>:a</code>, <code>:i</code> or <code>:c</code>. The benchmark harness uses it to test whether keystroke-level editing costs agents extra reasoning.</p>
+      <p><strong>It is a style restriction, not a sandbox:</strong> ex commands are vimscript, so <code>:call system('…')</code> still runs a shell. It is not a filter for untrusted steps.</p>
+
+      <h2 id="safe">Agent-safe profile</h2>
+      <p>With <code>--safe</code> (or <code>NEOVAIN_SAFE=1</code>) and a workspace root, <code>--workspace DIR</code> (or <code>NEOVAIN_WORKSPACE=DIR</code>), every step runs under two independent controls. This is the profile for model-generated steps against a local project:</p>
+      <ul>
+        <li><strong>An allow-list instead of a deny-list.</strong> Only anchors and ex commands from a fixed list of buffer edits are accepted: <code>:s</code>, <code>:d</code>, <code>:m</code>, <code>:t</code>/<code>:co</code>, <code>:g</code>/<code>:v</code> (whose nested command goes through the same list), <code>:a</code>, <code>:i</code>, <code>:c</code>, <code>:j</code>, <code>:pu</code>, <code>:y</code>, <code>:sort</code>, <code>:retab</code> and <code>:undo</code>. Everything else is refused before Neovim starts: <code>:!</code>, <code>:call</code>, <code>:execute</code>, <code>:normal</code>, <code>:lua</code>, <code>:source</code>, <code>:read</code>, <code>:w</code>, chained commands, expression replacements, the <code>=</code> register, normal-mode keys, and anything the parser cannot read.</li>
+        <li><strong>The target must live in the workspace.</strong> Both paths are canonicalized, so <code>..</code> traversal and a symlink that leaves the directory are refused. <code>--workspace</code> on its own confines the target without the allow-list.</li>
+      </ul>
+      <p>A refused command or path is a usage error (exit <code>2</code>); a failing step stays a failed step (exit <code>1</code>, file unchanged). The default mode and <code>NEOVAIN_EX_ONLY=1</code> are untouched — the profile is opt-in. It confines the commands and the path inside one Neovim process; it is not a kernel sandbox.</p>
 
       <h2 id="windows">Windows</h2>
       <p>Under Git Bash, MSYS rewrites arguments that contain <code>/…</code> (like <code>/pat&lt;CR&gt;</code>) into Windows paths. Run neovain with <code>MSYS_NO_PATHCONV=1</code>. neovain detects the mangling and refuses to run rather than edit the wrong thing. With conversion off, pass a relative or Windows-style (<code>C:/…</code>) path for <code>FILE</code>. PowerShell and WSL have none of these issues.</p>
@@ -268,9 +285,13 @@ WARNING: no blank line between 7 and 8, was 1</span></pre>
           <tr><td><code>-C N</code></td><td>Lines of context in the diff (default 2).</td></tr>
           <tr><td><code>--sw N</code></td><td>Shiftwidth for <code>&gt;</code> and <code>&lt;</code> in space-indented files (default 4).</td></tr>
           <tr><td><code>--timeout SECS</code></td><td>Abort if Neovim takes longer (default 10). The diff behind a summary and the analysis of the change stop at it as well.</td></tr>
+          <tr><td><code>--safe</code></td><td>The agent-safe profile: anchors and allow-listed ex commands only, target inside the workspace. Requires a workspace root.</td></tr>
+          <tr><td><code>--workspace DIR</code></td><td>Confine the target file to DIR, resolving <code>..</code> and symlinks. Usable alone; required with <code>--safe</code>.</td></tr>
           <tr><td><code>--</code></td><td>Treat everything after it as steps, for steps that look like flags.</td></tr>
           <tr><td><code>NEOVAIN_NVIM</code></td><td>Path to the <code>nvim</code> binary.</td></tr>
-          <tr><td><code>NEOVAIN_EX_ONLY=1</code></td><td>Allow only anchors and ex commands.</td></tr>
+          <tr><td><code>NEOVAIN_EX_ONLY=1</code></td><td>Allow only anchors and ex commands, and reject those that leave the buffer (shell, scripts, file writes, quit).</td></tr>
+          <tr><td><code>NEOVAIN_SAFE=1</code></td><td>Same as <code>--safe</code>.</td></tr>
+          <tr><td><code>NEOVAIN_WORKSPACE=DIR</code></td><td>Same as <code>--workspace</code>.</td></tr>
         </tbody>
       </table>
       <p>Exit status: <code>0</code> success, <code>1</code> a step failed or timed out (file unchanged), <code>2</code> usage or setup error.</p>

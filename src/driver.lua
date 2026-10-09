@@ -8,6 +8,8 @@ local function finish()
   vim.cmd("qall!")
 end
 
+-- job.file is a copy neovain made of the file asked for: a step that writes anyway writes the
+-- copy, so neovain stays the only one that can touch the real file.
 -- noautocmd skips filetype detection and ftplugins, which cost ~450ms and are disabled anyway.
 vim.cmd("silent noautocmd edit " .. vim.fn.fnameescape(job.file))
 -- Empty or new files have no line endings to detect; Neovim on Windows would pick CRLF.

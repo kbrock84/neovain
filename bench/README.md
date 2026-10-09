@@ -30,7 +30,7 @@ A checker then scores the result.
 |---|---|
 | `edit` | Its own editing tool only. In Claude Code that is the Edit tool (exact string replacement). In Codex it is the built-in patch tool. |
 | `neovain` | The neovain CLI only, through the shell. The agent is told to read the project README first. |
-| `neovain-ex` | neovain with `NEOVAIN_EX_ONLY=1`: anchors and ex commands, no normal-mode keys. First round only. |
+| `neovain-ex` | neovain with `NEOVAIN_EX_ONLY=1`: anchors and ex commands only, no normal-mode keys and no ex command that leaves the buffer (`:!`, `:lua`, `:py`, `:perl`, `:ruby`, `:source`, `:runtime`, `:earlier`/`:later`). First round only. |
 | `nvim` | Neovim itself, headless, as it comes: `nvim --clean --headless -n FILE -c ... -c wq`. The agent reads [`guides/nvim.md`](guides/nvim.md) instead of the README. |
 | `ast-grep` | The [ast-grep](https://ast-grep.github.io) CLI only, which finds code by its syntax tree and rewrites every match. The agent reads [`guides/ast-grep.md`](guides/ast-grep.md). |
 
