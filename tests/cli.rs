@@ -401,6 +401,47 @@ fn the_context_asked_for_does_not_choose_what_is_printed() {
     assert_eq!(out.lines().count(), 85, "{out}");
 }
 
+/// The steps of the report's finding A: every one of them would write the file or end Neovim
+/// before the report, so every one of them is a usage error and none of them touches the file.
+#[test]
+fn steps_that_write_or_quit_are_rejected_and_the_file_is_untouched() {
+    let c = Case::new(SAMPLE.as_bytes());
+    for step in [":w", ":w!", ":1,5w", ":%w", ":wq", ":x", ":q", ":q!", ":qa", ":wall", "ZZ", "ZQ", "ddZZ", ":w<CR>"] {
+        let o = c.run(&["dd", step]);
+        assert_eq!(o.status.code(), Some(2), "{step}: {}", stderr(&o));
+        assert!(stderr(&o).contains("may not write the file or quit"), "{step}: {}", stderr(&o));
+        assert_eq!(c.text(), SAMPLE, "{step}");
+    }
+}
+
+/// `:w` in the middle of a sequence used to write what came before it and then claim the file
+/// was unchanged; `ZZ` used to write it even with `--dry-run`.
+#[test]
+fn a_write_step_before_a_failing_step_never_reaches_the_file() {
+    let c = Case::new(SAMPLE.as_bytes());
+    let o = c.run(&["dd", ":w", "@^class NoExiste"]);
+    assert_eq!(o.status.code(), Some(2), "{}", stderr(&o));
+    assert_eq!(c.text(), SAMPLE);
+
+    let o = c.run(&["--dry-run", "ddZZ"]);
+    assert_eq!(o.status.code(), Some(2), "{}", stderr(&o));
+    assert_eq!(c.text(), SAMPLE);
+}
+
+/// A quit the filter cannot see: Neovim writes its buffer (a copy) and leaves without a report.
+/// The run fails with a message that says so, and the file is untouched either way.
+#[test]
+fn a_step_that_quits_neovim_fails_and_leaves_the_file_untouched() {
+    if !have_nvim() {
+        return;
+    }
+    let c = Case::new(SAMPLE.as_bytes());
+    let o = c.run(&["dd", ":call feedkeys(\"ZZ\", \"nx\")"]);
+    assert_eq!(o.status.code(), Some(1), "{}", stderr(&o));
+    assert!(stderr(&o).contains("neovim quit before writing its report"), "{}", stderr(&o));
+    assert_eq!(c.text(), SAMPLE);
+}
+
 #[test]
 fn changes_that_a_diff_does_not_show_are_in_the_summary() {
     if !have_nvim() {
@@ -421,4 +462,31 @@ fn changes_that_a_diff_does_not_show_are_in_the_summary() {
     assert!(o.status.success(), "{}", stderr(&o));
     let out = stdout(&o);
     assert!(out.ends_with("in the new file.\nwhitespace-only lines changed: 100, from +2\n"), "{out}");
+}
+
+#[test]
+fn a_range_that_stops_short_warns_about_the_line_left_behind() {
+    if !have_nvim() {
+        return;
+    }
+    let file = "import os\n\n\nclass A:\n    def run(self):\n        return 0\n\nclass B:\n    pass\n";
+    let c = Case::new(file.as_bytes());
+    // "-2" lands on the import instead of on the block's blank lines: class A and its def go
+    // to the end of the file and "return 0" is left behind under the import.
+    let o = c.run(&["@^class A", r":-2,/^\S/-3m$"]);
+    assert!(o.status.success(), "{}", stderr(&o));
+    let out = stdout(&o);
+    assert!(
+        out.contains("WARNING: line 2 is indented but no enclosing block starts above it (left behind by a range?)"),
+        "{out}"
+    );
+    let text = c.text();
+    assert!(text.starts_with("import os\n        return 0\n\nclass B:\n    pass\n"), "{text}");
+
+    // The same move done right leaves nothing behind, and says nothing.
+    let file = "import os\n\n\nclass A:\n    def run(self):\n        return 0\n\nclass B:\n    pass\n";
+    let c = Case::new(file.as_bytes());
+    let o = c.run(&["@^class A", r":.,/^\S/-2m$"]);
+    assert!(o.status.success(), "{}", stderr(&o));
+    assert!(!stdout(&o).contains("no enclosing block"), "{}", stdout(&o));
 }

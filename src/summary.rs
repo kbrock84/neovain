@@ -52,6 +52,16 @@ const MAX_WARNINGS: usize = 8;
 const MAX_NOTES: usize = 4;
 /// Excerpt lines are cut at this many characters.
 const MAX_WIDTH: usize = 100;
+/// How far above to look for the line that holds an indented line. Past this, nothing is
+/// guessed and no warning is printed.
+const LOOKBACK: usize = 200;
+/// First words of the lines that open a block where the line does not end in `:` or `{`:
+/// Ruby writes `def foo`, C-like languages write `if (x)`.
+const BLOCK_HEADS: &[&str] = &[
+    "if", "else", "elsif", "elif", "unless", "while", "until", "for", "foreach", "do", "def", "class", "module",
+    "begin", "loop", "with", "try", "catch", "finally", "switch", "case", "match", "function", "fn", "struct", "impl",
+    "trait", "enum", "namespace", "object", "interface", "protocol", "record", "union",
+];
 
 const LEGEND: &str =
     "summary (--diff full prints the diff). -N: old line. +N: new line. N: line next to the block, in the new file.";
@@ -137,6 +147,9 @@ pub struct Analysis<'a> {
     pub blocks: Vec<Block<'a>>,
     pub spacing: Vec<Spacing>,
     pub unseen: Unseen,
+    /// Lines of the new file that are indented with no block above them to hold them: what a
+    /// range that stopped short leaves behind. Only where this edit created the situation.
+    pub orphans: Vec<usize>,
     /// Newlines at the end of the file, before and after.
     pub end_newlines: (usize, usize),
     /// True if the time ran out. There are then no blocks, or coarser ones than there could be.
@@ -847,6 +860,56 @@ fn unseen(old: (&[&str], &[&str]), new: (&[&str], &[&str]), pairs: &[(usize, usi
     found
 }
 
+/// The line above `line` (both counted from 1 in `lines`) that could hold an indented line:
+/// the first line above it, not counting blank ones, that is indented less than `indent`. None
+/// if there is none within `LOOKBACK` lines, or none at all above it.
+fn container(lines: &[&str], line: usize, indent: usize) -> Option<usize> {
+    let first = line.saturating_sub(LOOKBACK).max(1);
+    (first..line).rev().find(|&no| !lines[no - 1].trim().is_empty() && width(lines[no - 1]) < indent)
+}
+
+/// Whether a line can hold the lines indented below it. It parses nothing: it looks for a block
+/// head, a line that continues, or a markdown heading or list item. A guess of "yes" only costs
+/// a warning that is not printed, so the doubt goes the quiet way.
+fn opens_block(line: &str) -> bool {
+    let text = line.trim();
+    if text.ends_with(|c: char| ":{}()[,\\|>=".contains(c)) {
+        return true;
+    }
+    // Markdown holds the lines under a heading and under a list item, and Ruby under `do |x|`.
+    if text.starts_with(|c: char| "-*>#".contains(c)) {
+        return true;
+    }
+    // An ordered list item: "1." or "1)".
+    if text.chars().next().is_some_and(|c| c.is_ascii_digit()) && text[1..].starts_with(['.', ')']) {
+        return true;
+    }
+    BLOCK_HEADS.contains(&text.split_whitespace().next().unwrap_or(""))
+}
+
+/// Lines of the new file that are indented with no block above them. A range that stops short
+/// when moving or deleting a block leaves its last lines next to a line that cannot hold them,
+/// and nothing else notices: this is what notices. Only where the edit created it is reported,
+/// so a file that already stood that way is not warned about on every change to it.
+fn orphans(old: &[&str], new: &[&str], o: &[Row], n: &[Row], map: &Map) -> Vec<usize> {
+    let held = |lines: &[&str], line: usize, indent: usize| {
+        container(lines, line, indent).is_some_and(|no| opens_block(lines[no - 1]))
+    };
+    let mut found = Vec::new();
+    for (row, r) in n.iter().enumerate() {
+        if r.width == 0 || held(new, r.no, r.width) {
+            continue;
+        }
+        // Not held now: either the line is new, or it used to be held and no longer is. Where
+        // neither can be told apart from the old file, nothing is said.
+        let held_before = map.n2o[row].map_or(true, |j| held(old, o[j].no, o[j].width));
+        if held_before {
+            found.push(r.no);
+        }
+    }
+    found
+}
+
 /// Compares two texts. The work stops being exact at the deadline, and is not begun after it.
 pub fn analyze<'a>(old_text: &'a str, new_text: &'a str, deadline: Instant) -> Analysis<'a> {
     let ((old, old_ends), (new, new_ends)) = (split(old_text), split(new_text));
@@ -854,7 +917,7 @@ pub fn analyze<'a>(old_text: &'a str, new_text: &'a str, deadline: Instant) -> A
     let nothing = (Vec::new(), Vec::new(), Vec::new(), Unseen::default());
     if Instant::now() >= deadline {
         let (replacements, blocks, spacing, unseen) = nothing;
-        return Analysis { old, new, replacements, blocks, spacing, unseen, end_newlines, timed_out: true };
+        return Analysis { old, new, replacements, blocks, spacing, unseen, orphans: Vec::new(), end_newlines, timed_out: true };
     }
     let (o, n) = (rows(&old), rows(&new));
     let canon = Canon::new(&discover(&o, &n));
@@ -879,6 +942,7 @@ pub fn analyze<'a>(old_text: &'a str, new_text: &'a str, deadline: Instant) -> A
         blocks: blocks(&o, &n, &map),
         spacing: spacing(&o, &n, &map),
         unseen: unseen((&old, &old_ends), (&new, &new_ends), &pairs),
+        orphans: orphans(&old, &new, &o, &n, &map),
         end_newlines,
         timed_out,
         old,
@@ -994,7 +1058,22 @@ fn file_warnings(a: &Analysis) -> Vec<String> {
         n => format!(" ({} at the end)", count(n - 1, "blank line")),
     };
     let end = format!("WARNING: file ends with {}, was {before}{blank}", count(after, "newline"));
-    Some(end).filter(|_| before != after).into_iter().chain(spacing_lines(a, true, MAX_WARNINGS)).collect()
+    Some(end)
+        .filter(|_| before != after)
+        .into_iter()
+        .chain(spacing_lines(a, true, MAX_WARNINGS))
+        .chain(orphan_lines(a))
+        .collect()
+}
+
+/// The lines left with no block above them: one warning each for the first few, then a count.
+fn orphan_lines(a: &Analysis) -> Vec<String> {
+    let one = |no: usize| {
+        format!("WARNING: line {no} is indented but no enclosing block starts above it (left behind by a range?)")
+    };
+    let rest = a.orphans.len().saturating_sub(MAX_NOTES);
+    let more = (rest > 0).then(|| format!("WARNING: {} more lines like it", count(rest, "line")));
+    a.orphans.iter().take(MAX_NOTES).map(|&no| one(no)).chain(more).collect()
 }
 
 /// The changes that a diff shows as two lines that look the same.
@@ -1196,6 +1275,25 @@ mod tests {
 
     fn totals() -> Totals {
         Totals { added: 0, removed: 0, hunks: 0, rough: false }
+    }
+
+    #[test]
+    fn a_range_that_stops_short_leaves_a_line_with_no_block_above_it() {
+        let old = "import os\n\n\nclass A:\n    def run(self):\n        return 0\n";
+        // The blank lines and the class header went to the end; `return 0` stayed behind,
+        // under the import that can hold nothing.
+        let new = "import os\n        return 0\n\nclass A:\n    def run(self):\n";
+        assert_eq!(compare(old, new).orphans, [2]);
+        // The same line still under its `def`: nothing to say.
+        assert!(compare(old, "import os\n\nclass A:\n    def run(self):\n        return 0\n").orphans.is_empty());
+        // Already standing like that before the edit: not this edit's doing, so it stays quiet.
+        let weird = "import os\n        return 0\n";
+        assert!(compare(weird, "import os\n        return 0\nx = 1\n").orphans.is_empty());
+        // A new line put where nothing can hold it is this edit's doing, and is reported.
+        assert_eq!(compare("import os\n", "import os\n    x = 1\n").orphans, [2]);
+        // Lines that hold what is indented under them say nothing.
+        let held = "def f():\n    return 1\n\n# Title\n\n    code block\n\nitems = [\n    1,\n]\n";
+        assert!(compare(held, held.replace("return 1", "return 2")).orphans.is_empty());
     }
 
     #[test]
